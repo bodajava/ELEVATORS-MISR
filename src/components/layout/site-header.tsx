@@ -4,6 +4,7 @@ import { BrandMark } from '@/components/layout/brand-mark';
 import { HeaderShell } from '@/components/layout/header-shell';
 import { DesktopNav } from '@/components/navigation/desktop-nav';
 import { LanguageSwitcher } from '@/components/navigation/language-switcher';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { MobileNav } from '@/components/navigation/mobile-nav';
 import { Magnetic } from '@/components/motion/magnetic';
 import { Button, CtaArrow } from '@/components/ui/button';
@@ -37,6 +38,7 @@ export async function SiteHeader({ locale }: { locale: Locale }) {
 
         <div className="flex items-center gap-3">
           <LanguageSwitcher locale={locale} className="hidden sm:flex" />
+          <ThemeToggle locale={locale} />
           <Magnetic className="hidden sm:inline-flex">
             <Button asChild variant="primary" size="sm">
               <Link href={primaryCta.href}>

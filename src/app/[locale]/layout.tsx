@@ -7,6 +7,7 @@ import { Concierge } from '@/components/concierge/concierge';
 import { AmbientField } from '@/components/motion/ambient-field';
 import { SmoothScroll } from '@/components/motion/smooth-scroll';
 import { BottomNav } from '@/components/navigation/bottom-nav';
+import { themeScript } from '@/components/ui/theme-toggle';
 import { SiteFooter } from '@/components/layout/site-footer';
 import { SiteHeader } from '@/components/layout/site-header';
 import { SkipLink } from '@/components/layout/skip-link';
@@ -24,8 +25,11 @@ export function generateStaticParams() {
 }
 
 export const viewport: Viewport = {
-  themeColor: '#e9e7e2',
-  colorScheme: 'light',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#faf9f5' },
+    { media: '(prefers-color-scheme: dark)', color: '#1c1b18' },
+  ],
+  colorScheme: 'light dark',
   width: 'device-width',
   initialScale: 1,
   // Never disable zoom — pinch-zoom is an accessibility requirement.
@@ -102,6 +106,10 @@ export default async function LocaleLayout({
       suppressHydrationWarning
     >
       <body className="min-h-dvh bg-paper text-ink antialiased">
+        {/* Applies a remembered theme before any content paints. It is the first thing in the
+            body rather than a hand-rolled <head>, because the App Router owns the head and a
+            <script> inside the React tree triggers a hydration warning in React 19. */}
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         {/* One shared background + cursor system for every page. Fixed, behind
             everything, pointer-events: none. See AmbientField. */}
         <AmbientField />

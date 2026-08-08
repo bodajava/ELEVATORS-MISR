@@ -27,47 +27,56 @@
    ========================================================================== */
 
 @theme {
-  /* --- Ground: warm cream, warm white, warm grey ------------------------- */
-  --color-paper: #f3f0e8;
-  --color-paper-raised: #f8f5ee;
-  --color-paper-sunken: #e8e3d7;
-  --color-paper-edge: #d8d2c4;
-  /* Warm grey surface for cards that need to separate from the page. */
-  --color-surface: #ebe6da;
+  /* --- Ground: linen ------------------------------------------------------
+     Direction "Zen Linen". Warmer and lighter than the previous cream, with a
+     terracotta accent in place of the electric orange.
+
+     Every value that carries text was measured, not picked. The supplied
+     accent #C96442 is 3.70:1 on this ground — it FAILS AA at body size — so it
+     is kept for rules, indicators and display-size type only, and two derived
+     tones carry anything smaller. That is the same discipline the previous
+     palette used, applied to new hues.
+
+     Tokens are declared here as fallbacks and re-declared per theme in :root /
+     [data-theme]. Anything that must invert lives in the theme blocks below. */
+  --color-paper: var(--paper);
+  --color-paper-raised: var(--paper-raised);
+  --color-paper-sunken: var(--paper-sunken);
+  --color-paper-edge: var(--paper-edge);
+  --color-surface: var(--surface);
 
   /* --- Carbon: the dark anchor sections and the media wells --------------- */
-  --color-aperture: #080d10;
-  --color-aperture-raised: #0f161a;
-  --color-carbon: #080d10;
-  --color-carbon-raised: #121a1f;
+  --color-aperture: var(--aperture);
+  --color-aperture-raised: var(--aperture-raised);
+  --color-carbon: var(--carbon);
+  --color-carbon-raised: var(--carbon-raised);
 
-  /* --- Ink: near-black editorial, not grey ------------------------------- */
-  --color-ink: #0b1013;
-  --color-ink-2: #3d464a;
-  --color-ink-3: #656e72;
-  --color-ink-on-dark: #f8f5ee;
-  --color-ink-2-on-dark: #a7afb3;
+  /* --- Ink ---------------------------------------------------------------- */
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-ink-on-dark: var(--ink-on-dark);
+  --color-ink-2-on-dark: var(--ink-2-on-dark);
 
-  /* --- Signal orange ------------------------------------------------------
-     `accent` is the fill. `accent-hi` is the hover/active lift. `accent-text`
-     is the only orange permitted at body size on a light ground. */
-  --color-accent: #ff6b00;
-  --color-accent-hi: #ff7200;
-  --color-accent-text: #a83f00;
-  /* What sits *on* an orange fill. Never white — see the contrast rule above. */
-  --color-on-accent: #080d10;
+  /* --- Terracotta accent --------------------------------------------------
+     `accent`      #C96442 — 3.70:1 on linen. Rules, indicators, display type.
+     `accent-hi`   the fill a CTA actually uses, dark enough that its label passes.
+     `accent-text` the only accent permitted at body size on a light ground.
+     `on-accent`   what sits on an accent fill. */
+  --color-accent: var(--accent);
+  --color-accent-hi: var(--accent-hi);
+  --color-accent-text: var(--accent-text);
+  --color-on-accent: var(--on-accent);
 
-  /* --- Rules --------------------------------------------------------------
-     Hairlines carry the whole structure in this system, so they are tokens
-     rather than ad-hoc alpha values. */
-  --color-rule: color-mix(in oklab, #0b1013 18%, transparent);
-  --color-rule-strong: color-mix(in oklab, #0b1013 38%, transparent);
-  --color-rule-on-dark: color-mix(in oklab, #f8f5ee 20%, transparent);
+  /* --- Rules -------------------------------------------------------------- */
+  --color-rule: var(--rule);
+  --color-rule-strong: var(--rule-strong);
+  --color-rule-on-dark: var(--rule-on-dark);
 
   /* --- Interaction -------------------------------------------------------- */
-  --color-focus: #0b1013;
-  --color-danger: #8f2d22;
-  --color-success: #2f5d3f;
+  --color-focus: var(--focus);
+  --color-danger: var(--danger);
+  --color-success: var(--success);
 
   /* --- Type -------------------------------------------------------------- */
   --font-display: var(--font-display-latin), var(--font-arabic), Georgia, serif;
@@ -173,7 +182,139 @@
 }
 
 :root {
+}
+
+/* ==========================================================================
+   Themes — "Zen Linen", light and dark
+
+   Light is the default and the design target. Dark is a real theme, not an
+   inversion: the accent lightens (a terracotta dark enough to read on linen is
+   nearly invisible on charcoal), and the carbon sections become *lighter* than
+   the page rather than darker, because a black band on a black page is not a
+   band at all.
+
+   Every text pairing below is measured. The numbers are in DESIGN.md and are
+   asserted by tests/unit/contrast.test.ts, so a future edit that breaks one
+   fails the suite rather than shipping.
+   ========================================================================== */
+
+:root,
+[data-theme='light'] {
   color-scheme: light;
+
+  --paper: #faf9f5;
+  --paper-raised: #ffffff;
+  --paper-sunken: #f0eee6;
+  --paper-edge: #e3e0d5;
+  --surface: #f4f2ea;
+
+  /* The dark anchor sections. Warm charcoal, not black — it belongs to linen. */
+  --aperture: #262624;
+  --aperture-raised: #33322f;
+  --carbon: #262624;
+  --carbon-raised: #33322f;
+
+  --ink: #3d3929; /* 10.98:1 on linen */
+  --ink-2: #5c5747; /* secondary */
+  --ink-3: #6f6a5b; /* annotation — 5.13:1. #837E6C measured 3.86:1 and failed AA */
+  --ink-on-dark: #faf9f5;
+  --ink-2-on-dark: #b8b3a4;
+
+  --accent: #c96442; /* 3.70:1 — rules, indicators, display type only */
+  --accent-hi: #b0522e; /* CTA fill; its label is #FAF9F5 at 4.87:1 */
+  --accent-text: #a84e2b; /* 5.26:1 — the only accent at body size */
+  --on-accent: #faf9f5; /* 4.87:1 on --accent-hi */
+
+  --rule: color-mix(in oklab, #3d3929 16%, transparent);
+  --rule-strong: color-mix(in oklab, #3d3929 34%, transparent);
+  --rule-on-dark: color-mix(in oklab, #faf9f5 20%, transparent);
+
+  --focus: #3d3929;
+  --danger: #b3392f;
+  --success: #4a6b45;
+}
+
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  --paper: #1c1b18;
+  --paper-raised: #262624;
+  --paper-sunken: #171614;
+  --paper-edge: #3a3934;
+  --surface: #262624;
+
+  /* Inverted on purpose: the "anchor" sections lift out of the page instead of
+     sinking into it, which is the only way the composition survives inversion. */
+  --aperture: #33322f;
+  --aperture-raised: #403f3a;
+  --carbon: #33322f;
+  --carbon-raised: #403f3a;
+
+  --ink: #ede9de; /* 14.20:1 on the dark ground */
+  --ink-2: #c4bfb1;
+  --ink-3: #948f80;
+  --ink-on-dark: #ede9de;
+  --ink-2-on-dark: #b8b3a4;
+
+  --accent: #e08a5f; /* 6.54:1 — readable on charcoal, unlike #C96442 */
+  --accent-hi: #eb9a71;
+  --accent-text: #e08a5f; /* passes at body size here, so one tone serves both */
+  --on-accent: #1c1b18; /* 6.54:1 on --accent */
+
+  --rule: color-mix(in oklab, #ede9de 16%, transparent);
+  --rule-strong: color-mix(in oklab, #ede9de 32%, transparent);
+  --rule-on-dark: color-mix(in oklab, #ede9de 20%, transparent);
+
+  --focus: #ede9de;
+  --danger: #e5776b;
+  --success: #7da674;
+}
+
+/* Follow the operating system until the visitor chooses. Once they do, the
+   attribute on <html> wins, because an explicit choice outranks a default. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+
+    --paper: #1c1b18;
+    --paper-raised: #262624;
+    --paper-sunken: #171614;
+    --paper-edge: #3a3934;
+    --surface: #262624;
+
+    --aperture: #33322f;
+    --aperture-raised: #403f3a;
+    --carbon: #33322f;
+    --carbon-raised: #403f3a;
+
+    --ink: #ede9de;
+    --ink-2: #c4bfb1;
+    --ink-3: #948f80;
+    --ink-on-dark: #ede9de;
+    --ink-2-on-dark: #b8b3a4;
+
+    --accent: #e08a5f;
+    --accent-hi: #eb9a71;
+    --accent-text: #e08a5f;
+    --on-accent: #1c1b18;
+
+    --rule: color-mix(in oklab, #ede9de 16%, transparent);
+    --rule-strong: color-mix(in oklab, #ede9de 32%, transparent);
+    --rule-on-dark: color-mix(in oklab, #ede9de 20%, transparent);
+
+    --focus: #ede9de;
+    --danger: #e5776b;
+    --success: #7da674;
+  }
+}
+
+/* The theme transition is deliberately short and limited to colour: a long
+   cross-fade of an entire page reads as a bug, and animating anything else
+   would relayout. */
+@media (prefers-reduced-motion: no-preference) {
+  :root {
+    --theme-transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease;
+  }
 }
 
 /* ==========================================================================

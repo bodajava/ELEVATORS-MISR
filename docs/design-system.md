@@ -1,4 +1,13 @@
-# Design System — "Signal"
+# Design System — "Zen Linen"
+
+> **Superseded palette.** "Signal" (cream `#F3F0E8` / carbon `#080D10` / orange `#FF6B00`) was
+> replaced on 2026-08-08 by "Zen Linen": linen `#FAF9F5`, ink `#3D3929`, terracotta `#C96442`,
+> with a real dark theme. The _structure_ below still holds — two radius scales, restricted
+> glass, the travel curve, the single-active invariant, the media rules — only the hues
+> changed. Current values and their measured contrast are in [`../DESIGN.md`](../DESIGN.md) §2
+> and asserted by `tests/unit/contrast.test.ts`.
+
+## The system this replaced — "Signal"
 
 Supersedes "Aperture" (2026-08-06), which was rejected in review as too pale and visually flat,
 with no conversion colour anywhere on the page.

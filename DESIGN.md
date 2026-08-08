@@ -1,7 +1,8 @@
 # Egypt Elevators — Design System
 
-**Direction: "Signal".** A warm cream page, carbon-black anchor sections cut in under large
-curves, and one electric orange that only ever means _act here_.
+**Direction: "Zen Linen".** A warm linen page, charcoal anchor sections cut in under large
+curves, and a terracotta accent that only ever means _act here_. Light and dark are both
+first-class themes.
 
 ---
 
@@ -61,44 +62,48 @@ editorial, and a card is used only when the content is genuinely a discrete obje
 
 Transcribed from `@theme`. See `docs/design-system.md` §2 for the reasoning.
 
-| Token                     | Value     | Use                                              |
-| ------------------------- | --------- | ------------------------------------------------ |
-| `--color-paper`           | `#F3F0E8` | The page. Warm cream.                            |
-| `--color-paper-raised`    | `#F8F5EE` | Warm white — glass surfaces, raised cards.       |
-| `--color-paper-sunken`    | `#E8E3D7` | Warm grey — recessed sections.                   |
-| `--color-paper-edge`      | `#D8D2C4` | Warm edge / divider fill.                        |
-| `--color-surface`         | `#EBE6DA` | Warm grey card surface.                          |
-| `--color-carbon`          | `#080D10` | Anchor sections and the footer.                  |
-| `--color-carbon-raised`   | `#121A1F` | Raised surface on carbon.                        |
-| `--color-aperture`        | `#080D10` | The media well.                                  |
-| `--color-aperture-raised` | `#0F161A` | Raised surface inside a media well.              |
-| `--color-ink`             | `#0B1013` | Body and display type. Near-black, not grey.     |
-| `--color-ink-2`           | `#3D464A` | Secondary type.                                  |
-| `--color-ink-3`           | `#656E72` | Annotation type.                                 |
-| `--color-ink-on-dark`     | `#F8F5EE` | Type on carbon.                                  |
-| `--color-ink-2-on-dark`   | `#A7AFB3` | Secondary type on carbon.                        |
-| `--color-accent`          | `#FF6B00` | Signal orange — fills, rules, display-size type. |
-| `--color-accent-hi`       | `#FF7200` | Hover / active lift.                             |
-| `--color-accent-text`     | `#A83F00` | The only orange permitted at body size on cream. |
-| `--color-on-accent`       | `#080D10` | What sits on an orange fill.                     |
-| `--color-rule`            | 18% ink   | Hairline. Structure is carried by rules.         |
-| `--color-rule-strong`     | 38% ink   | Emphasised hairline, control borders.            |
-| `--color-rule-on-dark`    | 20% paper | Hairline on carbon.                              |
-| `--color-focus`           | `#0B1013` | Focus ring.                                      |
-| `--color-danger`          | `#8F2D22` | Form errors.                                     |
-| `--color-success`         | `#2F5D3F` | Confirmation.                                    |
+Values live in `src/app/globals.css`, declared once per theme. Every pairing below is
+**measured**, and `tests/unit/contrast.test.ts` asserts them on every run.
+
+| Token          | Light     | Dark      | Use                                                                                             |
+| -------------- | --------- | --------- | ----------------------------------------------------------------------------------------------- |
+| `paper`        | `#FAF9F5` | `#1C1B18` | The page                                                                                        |
+| `paper-raised` | `#FFFFFF` | `#262624` | Raised surfaces, glass                                                                          |
+| `paper-sunken` | `#F0EEE6` | `#171614` | Recessed sections                                                                               |
+| `surface`      | `#F4F2EA` | `#262624` | Card surface                                                                                    |
+| `carbon`       | `#262624` | `#33322F` | Anchor sections. **Lighter than the page in dark** — a black band on a black page is not a band |
+| `ink`          | `#3D3929` | `#EDE9DE` | Body and display type                                                                           |
+| `ink-2`        | `#5C5747` | `#C4BFB1` | Secondary                                                                                       |
+| `ink-3`        | `#6F6A5B` | `#948F80` | Annotation                                                                                      |
+| `accent`       | `#C96442` | `#E08A5F` | Rules, indicators, **display-size type only**                                                   |
+| `accent-hi`    | `#B0522E` | `#EB9A71` | The CTA fill                                                                                    |
+| `accent-text`  | `#A84E2B` | `#E08A5F` | The only accent permitted at body size                                                          |
+| `on-accent`    | `#FAF9F5` | `#1C1B18` | What sits on an accent fill                                                                     |
+| `danger`       | `#B3392F` | `#E5776B` | Form errors                                                                                     |
+| `focus`        | `#3D3929` | `#EDE9DE` | Focus ring                                                                                      |
 
 ### Contrast rules — checked, not guessed
 
-These are load-bearing and are why there are three orange tokens rather than one:
+These are load-bearing and are why there are three accent tokens rather than one:
 
-- **`#FF6B00` on white is 2.9:1 — fails at every size.** Orange fills always carry carbon text
-  (`--color-on-accent`, 6.8:1). **Never white on orange.**
-- **`#FF6B00` as text on cream is 2.5:1 — fails.** Small orange text uses
-  `--color-accent-text` (`#A83F00`, 5.3:1). Full-strength orange on a light ground is for
-  fills, rules and display-size type only.
-- On carbon this reverses: `#FF6B00` on `#080D10` is 6.8:1 and is correct, while
-  `--color-accent-text` would be nearly invisible.
+- **`#C96442` on linen is 3.70:1 — it fails AA at body size.** It is kept for rules,
+  indicators and display-size type. Anything smaller uses `accent-text` (`#A84E2B`, 5.26:1).
+- **Neither white nor the ink passes on `#C96442` as a fill** (3.90:1 and 2.97:1). So the CTA
+  fill is `accent-hi` (`#B0522E`), whose `#FAF9F5` label measures **4.87:1**.
+- **Dark reverses the problem.** A terracotta dark enough to read on linen is nearly invisible
+  on charcoal, so dark uses `#E08A5F` — 6.54:1 on the page, and dark enough underneath that a
+  `#1C1B18` label on it also measures 6.54:1. One tone serves both roles there.
+- `ink-3` is `#6F6A5B`, not the `#837E6C` the palette first suggested: that measured 3.86:1
+  and failed. The contrast test caught it before it shipped.
+
+### Themes
+
+Light is the default and the design target. Dark is a real theme, not an inversion — the
+accent lightens and the anchor sections lift _out_ of the page instead of sinking into it.
+
+The site follows the OS until the visitor presses the toggle; an explicit choice is stored and
+outranks the default. An inline script in `<body>` applies it before any content paints, so
+there is no flash of the wrong theme.
 
 ### Where orange is allowed
 
