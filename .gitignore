@@ -71,6 +71,10 @@ next-env.d.ts
 /.audit/
 /.shots/
 /.hero-check/
+/.form-check/
+/.audit-density/
+/.shots-gate/
+/.perf/
 /.stages/
 /.review/
 

@@ -1,12 +1,13 @@
 import { setRequestLocale } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 
+import { JsonLd } from '@/components/seo/json-ld';
 import { Ascent } from '@/components/sections/ascent';
 import { Hero } from '@/components/sections/hero';
 import { InspectionCta } from '@/components/sections/inspection-cta';
 import { MediaStories } from '@/components/sections/media-stories';
 import { PanoramaStory } from '@/components/sections/panorama-story';
-import { ProcessSteps } from '@/components/sections/process-steps';
+import { HomeProcess } from '@/components/sections/home-process';
 import { Proof } from '@/components/sections/proof';
 import { SelectedProjects } from '@/components/sections/selected-projects';
 import { SocialProof } from '@/components/sections/social-proof';
@@ -14,6 +15,7 @@ import { ascent } from '@/content/home';
 import { featuredProjects, finishLabels, settingLabels } from '@/content/projects';
 import { isLocale, type Locale } from '@/i18n/config';
 import { bestImageFor, heroAsset, maxImageWidth } from '@/lib/media';
+import { homePageSchema } from '@/lib/seo/schema';
 
 /**
  * Homepage — a guided vertical journey.
@@ -65,12 +67,15 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
 
   return (
     <>
+      {/* Organization + WebSite + Service, cross-linked by @id. See lib/seo/schema.ts. */}
+      <JsonLd data={homePageSchema(l)} />
+
       <Hero locale={l} heroAsset={heroAsset} />
       <Proof locale={l} />
       <Ascent floors={floors} eyebrow={ascent.eyebrow[l]} heading={ascent.heading[l]} locale={l} />
       <PanoramaStory locale={l} />
       <SelectedProjects locale={l} />
-      <ProcessSteps locale={l} />
+      <HomeProcess locale={l} />
       <MediaStories locale={l} />
       <SocialProof locale={l} />
       <InspectionCta locale={l} />

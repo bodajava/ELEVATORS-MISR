@@ -10,3 +10,5 @@ docs/asset-inventory.json
 .claude/
 skills-lock.json
 .audit/
+# Written by scripts/build-media.mjs. Formatting it produces diffs against a file nobody edits.
+src/content/generated/

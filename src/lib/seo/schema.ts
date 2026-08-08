@@ -43,6 +43,41 @@ export function organizationSchema(locale: Locale): Json {
   };
 }
 
+/**
+ * The site itself.
+ *
+ * No `SearchAction`: there is no site search, and declaring a `potentialAction` that 404s is
+ * how a sitelinks searchbox turns into a broken one. The `@id` is locale-scoped because the
+ * English and Arabic homepages are separate documents with separate canonicals — collapsing
+ * them onto one `@id` would make the two `inLanguage` values contradict each other.
+ */
+export function webSiteSchema(locale: Locale): Json {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    '@id': `${siteUrl}/${locale}#website`,
+    name: brand.name,
+    alternateName: brand.nameAr,
+    url: `${siteUrl}/${locale}`,
+    inLanguage: localeTags[locale],
+    publisher: { '@id': `${siteUrl}/#organization` },
+  };
+}
+
+/**
+ * The homepage graph.
+ *
+ * One array, three nodes, cross-referenced by `@id` rather than nested — which is what lets
+ * the Organization node declared here be the same entity the About and project pages point
+ * at, instead of three separate companies that happen to share a name.
+ *
+ * Locale-aware throughout: language tags, the localised service description, and the URLs all
+ * follow the locale, so the Arabic homepage does not describe itself as an English document.
+ */
+export function homePageSchema(locale: Locale): Json[] {
+  return [organizationSchema(locale), webSiteSchema(locale), serviceSchema(locale)];
+}
+
 export function serviceSchema(locale: Locale): Json {
   return {
     '@context': 'https://schema.org',

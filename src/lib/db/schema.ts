@@ -1,0 +1,87 @@
+import { index, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+
+/**
+ * Database schema.
+ *
+ * Plain PostgreSQL — no provider extensions, no vendor types, no RLS policies expressed
+ * here. It applies identically to a local Postgres, Neon, Supabase, RDS or Cloud SQL, which
+ * is the point: the deployment target is not a decision this repository has made.
+ *
+ * ── What is stored, and what is not ─────────────────────────────────────────
+ * A lead is a name, a phone number and an area. That is what the form asks for and it is all
+ * that is kept. Not stored: IP address (hashed in memory for rate limiting, never written),
+ * user agent, referrer, session identifier, or any analytics join key. Every one of those
+ * would be personal data under Egypt's PDPL with no operational purpose behind it.
+ */
+
+export const inspectionSetting = pgEnum('inspection_setting', [
+  'villa',
+  'residence',
+  'commercial',
+  'unsure',
+]);
+
+export const inspectionFinish = pgEnum('inspection_finish', [
+  'brass-glass',
+  'smoked-glass',
+  'unsure',
+]);
+
+export const inspectionStatus = pgEnum('inspection_status', [
+  'new',
+  'contacted',
+  'scheduled',
+  'closed',
+]);
+
+export const requestLocale = pgEnum('request_locale', ['en', 'ar']);
+
+export const inspectionRequests = pgTable(
+  'inspection_requests',
+  {
+    /**
+     * Internal identifier. Random, not sequential — but still internal: it is never sent to
+     * the browser. `reference` is the public handle.
+     */
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    /**
+     * The public reference the visitor is shown. Unique so `canonicaliseReference` can look
+     * a request up unambiguously when someone reads it back over the phone.
+     */
+    reference: text('reference').notNull(),
+
+    name: text('name').notNull(),
+    /** E.164, normalised on the way in — one person is one value however they typed it. */
+    phone: text('phone').notNull(),
+    /** Free text: whatever the visitor calls their area. Not geocoded, not validated. */
+    area: text('area').notNull(),
+
+    setting: inspectionSetting('setting').notNull().default('unsure'),
+    finish: inspectionFinish('finish').notNull().default('unsure'),
+    notes: text('notes').notNull().default(''),
+
+    /** The language the visitor was reading — determines the language of any follow-up. */
+    locale: requestLocale('locale').notNull(),
+
+    /**
+     * Record of the consent that made this row lawful to hold. `consentedAt` is a real
+     * column rather than an inferred one so a deletion request can be answered with
+     * evidence rather than an assumption.
+     */
+    consentedAt: timestamp('consented_at', { withTimezone: true }).notNull(),
+
+    status: inspectionStatus('status').notNull().default('new'),
+
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('inspection_requests_reference_idx').on(table.reference),
+    // The operational query is "what came in, newest first, still untouched".
+    index('inspection_requests_status_created_idx').on(table.status, table.createdAt),
+  ]
+);
+
+export type InspectionRequestRow = typeof inspectionRequests.$inferSelect;
+export type NewInspectionRequestRow = typeof inspectionRequests.$inferInsert;
