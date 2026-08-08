@@ -473,3 +473,21 @@ now steps down below `sm`.
 3. **Performance measurement** — no Lighthouse, bundle analysis or trace was run.
 4. **gstack** — still not installed; Bun is absent. Methodology applied by hand.
 5. **Git checkpoint** — still not committed; `user.email` is still `bbido761@gmail.com.com`.
+
+---
+
+## Addendum — 2026-08-08, marketing video rights
+
+Frame-by-frame inspection of `assets/VIDOES/MARKTEING-video/` found that **all four** films
+carry an identifiable person — two different presenters — plus third-party marks on the B-roll
+and an unsupported "38 years" claim.
+
+One had been recorded as `rights: clear` because the note captured only its 360x640 resolution.
+Nothing shipped, but only because its role was `none`; `SHIPPABLE_ROLES` had already been
+widened once. Consent is now enforced on the asset's **kind**, not its role — no video marked
+`people-consent` can ship whatever role it is given — and
+`tests/unit/media-rights.test.ts` asserts that against the generated manifest.
+
+Replacement films are specified in
+[`MARKETING-VIDEO-REPLACEMENT-PLAN.md`](MARKETING-VIDEO-REPLACEMENT-PLAN.md). None has been
+generated: no provider is configured. The slider keeps its nine approved films.

@@ -281,6 +281,13 @@ No credit or watermark was removed, no consent was assumed, and low resolution w
 as approval. **The nine rights-clear films are the correct public set** until written rights
 arrive. No empty placeholder is rendered for a blocked clip — the slider simply carries nine.
 
+**Correction, 2026-08-08.** Frame extraction showed all four carry an identifiable person, not
+three — the fourth had been classified `clear` on the strength of a resolution note alone.
+Consent is now enforced on asset kind rather than role, and asserted by
+`tests/unit/media-rights.test.ts`. Four replacement films are specified in
+[`MARKETING-VIDEO-REPLACEMENT-PLAN.md`](MARKETING-VIDEO-REPLACEMENT-PLAN.md); none has been
+generated, because no AI-video provider is configured.
+
 ---
 
 ## 11. Remaining decisions and credentials

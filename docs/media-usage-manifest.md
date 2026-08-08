@@ -66,6 +66,11 @@ from `productFilms()`.
 | `assets/VIDOES/SHOW PRODUT video/2026-08-05 23.24.56.mp4`                                                                   | video | 464x848 · 86s         | clear                 | **ships**    | Homepage film slider                                   | Two slides visible; only the active one plays     | One slide + peek of next | Poster first; source attached within 400px of viewport |                                                                               |
 | `assets/VIDOES/SHOW PRODUT video/savefromins.com  0 720P.mp4`                                                               | video | 640x1138 · 41s        | clear                 | **ships**    | Homepage film slider                                   | Two slides visible; only the active one plays     | One slide + peek of next | Poster first; source attached within 400px of viewport |                                                                               |
 
+> **Replacement plan.** Four rights-clear films are specified to replace the blocked marketing
+> videos in [`MARKETING-VIDEO-REPLACEMENT-PLAN.md`](MARKETING-VIDEO-REPLACEMENT-PLAN.md). No
+> video has been generated: no AI-video provider or credential is configured. The nine approved
+> films remain the public set until replacements exist and are approved.
+
 ### The six held-back videos
 
 None of these is a layout problem, and no layout change can include them. They are Phase-0
