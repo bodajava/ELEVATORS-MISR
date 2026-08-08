@@ -4,6 +4,15 @@
 **Scope:** `/Users/abdelrhmannounir/Desktop/REAL-ELEVATORS`
 **Mode:** Diagnosis and reporting only. No features were added, redesigned, or removed during this phase.
 
+> ### ⚠ Superseded in part — see §20, added 2026-08-08
+>
+> The audit below records the state on **2026-08-07**. The conversion-and-infrastructure phase
+> that followed closed four of its findings (the inspection form, the database, version control,
+> and environment documentation) and re-opened none. **§20 is the current status**; everything
+> before it is preserved unedited as the record of what was found, including findings that no
+> longer hold. Where a section is now out of date, §20 says so explicitly rather than the
+> section being quietly rewritten.
+
 > **Reading this report.** Everything under "Confirmed" was observed directly — a command's exit
 > code, a browser measurement, a file on disk. Everything under "Assumption" is inference and is
 > labelled as such. Where a check could not be run, the reason is stated rather than the check
@@ -494,3 +503,82 @@ rights at build time.
 **Effort:** Large
 **Outcome:** Concierge and conversion measurement.
 **Files:** `src/lib/ai`, `src/app/api/concierge`, `src/lib/analytics`
+
+---
+
+## 20. Addendum — 2026-08-08 conversion & infrastructure phase
+
+**Mode:** implementation. Verified by command exit code, unit test, and browser measurement.
+The full narrative is in [`PHASE-1-IMPLEMENTATION-REPORT.md`](PHASE-1-IMPLEMENTATION-REPORT.md);
+this section records only what changed about the audit's own findings.
+
+### 20.1 Findings now closed
+
+| ID      | Original finding                                              | Status     | Evidence                                                                               |
+| ------- | ------------------------------------------------------------- | ---------- | -------------------------------------------------------------------------------------- |
+| **B-1** | Inspection form does not exist — 0 input fields on `/contact` | **Closed** | 7 named controls render in both locales at both viewports; 138/138 browser checks pass |
+| **M-1** | Form + validation + honeypot + rate limit + reference code    | **Closed** | `src/lib/inspection/*`, `src/app/[locale]/contact/actions.ts`, 72 unit tests           |
+| **M-2** | No database / lead storage                                    | **Closed** | Drizzle schema + generated migration `drizzle/0000_inspection_requests.sql`            |
+| **M-5** | Not a git repository                                          | **Closed** | Repository initialised on `main`; baseline commit `0b28e01`, 560 files                 |
+| **P-1** | No `.env.example` / no environment documentation              | **Closed** | `.env.example`, `src/lib/env.ts`, README §Environment                                  |
+
+### 20.2 Findings still open
+
+| ID                        | Finding                                          | Why it is still open                                                                                                                         |
+| ------------------------- | ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| **B-2**                   | `pnpm test:e2e` fails — no `playwright.config.*` | Not in this phase's scope. Browser verification runs through `scripts/*.mjs` harnesses instead, which are real but are not `playwright test` |
+| **M-3**                   | AI concierge                                     | Explicitly deferred                                                                                                                          |
+| **M-7**                   | Analytics                                        | Explicitly deferred                                                                                                                          |
+| **M-8**                   | Lead notification email                          | Env vars are declared and documented; no delivery is wired up                                                                                |
+| **B-4**, **R-2**, **R-3** | Mobile UX and touch-target findings              | Not in this phase's scope                                                                                                                    |
+
+### 20.3 Corrections to the audit's own text
+
+- **§1, §2, §5, §6, §10, §15, §16, §18** describe the contact page as having no form and the
+  project as having no version control and no environment file. All four statements were true on
+  2026-08-07 and are **no longer true**. They are left in place as the historical record.
+- **§2 status table**, current values: Conversion — **present**; Backend — **present (PostgreSQL
+  via Drizzle, provider-neutral)**; Version control — **git, branch `main`**; Tests — **72 unit
+  tests pass**, E2E still absent.
+
+### 20.4 New findings from this phase
+
+Two defects were found by browser verification **after** the code passed typecheck, lint, unit
+tests and build. Both are fixed; both are recorded because they describe a class of failure that
+automated assertions did not catch.
+
+| ID      | Finding                                                                                                                                                                                                                                                                                                                                                                                                      | Severity | Status                                                                                                                                        |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| **N-1** | **Silent lead loss.** The honeypot's render timestamp lived on an uncontrolled input set imperatively. When a submission returned validation errors, React reset the input to its `defaultValue`, so the visitor's _corrected_ second attempt carried an empty timestamp, tripped the honeypot, and was discarded behind a success panel. Every visitor who mistyped anything would have lost their enquiry. | Critical | **Fixed** — value is now controlled via `useSyncExternalStore`; regression covered by the store-correlation check in `scripts/form-check.mjs` |
+| **N-2** | **Rejected submissions wiped the form.** Same root cause, different symptom: every field reset on a failed round trip, so correcting one bad digit meant retyping all six.                                                                                                                                                                                                                                   | High     | **Fixed** — the action echoes submitted values back and each control seeds its `defaultValue` from them                                       |
+| **N-3** | A missing `RATE_LIMIT_SALT` in production threw out of the server action and rendered the page-level error boundary — a configuration mistake presented to visitors as a broken website.                                                                                                                                                                                                                     | Medium   | **Fixed** — caught and converted to a fail-closed "not recorded" state                                                                        |
+
+### 20.5 Verification evidence
+
+| Check                                                       | Result                                                     |
+| ----------------------------------------------------------- | ---------------------------------------------------------- |
+| `pnpm verify` (typecheck → lint → test → build)             | exit 0                                                     |
+| Unit tests                                                  | 72 passed, 5 files                                         |
+| `scripts/form-check.mjs` (EN/AR × 1440×900 and 390×844)     | **138/138 checks passed**                                  |
+| `scripts/hero-check.mjs`                                    | Geometry identical to the frozen baseline; 0 GSAP warnings |
+| Fail-closed behaviour (production build, no `DATABASE_URL`) | Refuses; no reference shown; typed values retained         |
+
+### 20.6 Hero freeze
+
+The hero was under a freeze during this phase. `src/components/sections/hero.tsx`,
+`hero-instruments.tsx`, `media/hero-video.tsx`, `scripts/hero-check.mjs`,
+`tests/unit/media.test.ts`, `src/content/generated/media-manifest.json` and both hero video
+derivatives are **byte-identical to the baseline commit**, confirmed with `git diff`. The measured
+geometry is unchanged at both viewports.
+
+The burned-in **"ARAB EGYPT FOR ELEVATORS"** text in `assets/VIDOES/HERO-VDUE/IMG_9128.MP4` remains
+visible in the hero at every scroll position. It conflicts with the site's English brand name,
+"Egypt Elevators", shown in the header directly above it. The clip is explicitly approved and
+required by the project owner; this is a **known, accepted issue**, recorded here rather than
+resolved. It is not a defect to be fixed without a new instruction.
+
+### 20.7 Deliberate scope exclusions
+
+Not started, by instruction: global 20% image reduction, nine-project presentation, `GENERALIMGA`
+gallery, `PHOTO WITH ACTORS` gallery, marketing-video slider, Show Product videos, full media
+manifest reconstruction.

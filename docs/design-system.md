@@ -1,8 +1,14 @@
 # Design System — "Signal"
 
 Supersedes "Aperture" (2026-08-06), which was rejected in review as too pale and visually flat,
-with no conversion colour anywhere on the page. This document is authoritative; where anything
-else in the repo disagrees with it, this wins.
+with no conversion colour anywhere on the page.
+
+> **Authority.** This document is authoritative on **rationale and implementation detail** —
+> why each decision was made, the scroll budgets, the media and video rules, the single-active
+> invariant. [`../DESIGN.md`](../DESIGN.md) consolidates the same system into a single
+> structured reference (tokens, scales, grid, accessibility, RTL, mobile) and does not replace
+> it. Token _values_ live in `src/app/globals.css` `@theme` and that file is authoritative for
+> them. Where this document and `DESIGN.md` differ on detail, this one wins.
 
 What survives from Aperture: the dark media well (now curved, not square), the hairline rule
 grid, the annotation layer, and the travel easing curve. What does not: the plaster ground, the
