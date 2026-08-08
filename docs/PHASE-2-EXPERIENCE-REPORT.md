@@ -4,6 +4,13 @@
 **Preceded by:** [`PHASE-1-IMPLEMENTATION-REPORT.md`](PHASE-1-IMPLEMENTATION-REPORT.md) ·
 [`FULL-PROJECT-AUDIT.md`](FULL-PROJECT-AUDIT.md)
 
+> ### Superseded — see the final report
+>
+> [`FINAL-PRODUCTION-READINESS-REPORT.md`](FINAL-PRODUCTION-READINESS-REPORT.md) (2026-08-08) is
+> the current status of this project. It records the Contact rebuild, the AI concierge, the
+> first real performance measurement, the Bun/gstack installation, the git checkpoints, and the
+> two remaining blockers. This document is kept as the record of an earlier phase.
+
 ---
 
 ## 1. Executive summary

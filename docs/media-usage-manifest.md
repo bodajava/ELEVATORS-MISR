@@ -2,6 +2,13 @@
 
 **Generated:** 2026-08-08 · Regenerate the underlying data with `node scripts/build-media.mjs`.
 
+> ### Superseded — see the final report
+>
+> [`FINAL-PRODUCTION-READINESS-REPORT.md`](FINAL-PRODUCTION-READINESS-REPORT.md) (2026-08-08) is
+> the current status of this project. It records the Contact rebuild, the AI concierge, the
+> first real performance measurement, the Bun/gstack installation, the git checkpoints, and the
+> two remaining blockers. This document is kept as the record of an earlier phase.
+
 Every unique **original** under `assets/`, what happens to it, and — where it does not ship —
 why. Optimised derivatives in `public/media/` are **not** counted as separate originals; they
 are outputs of `scripts/build-media.mjs` and there are several per original (widths, formats,

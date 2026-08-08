@@ -123,6 +123,18 @@ Binding outputs of Phase 0 that later work must respect:
   `--color-accent-text` (`#A83F00`, 5.3:1). Full-strength orange on a light ground is for
   fills, rules and display-size type only.
 
+## Current status
+
+The build is feature-complete and verified; it is **not production ready**, because the
+inspection form has no database and no lead notification. Full status, evidence and the
+remaining credential list:
+[`docs/FINAL-PRODUCTION-READINESS-REPORT.md`](docs/FINAL-PRODUCTION-READINESS-REPORT.md).
+
+Verification harnesses live in `scripts/` and are run against a dev or production server:
+`hero-check`, `form-check`, `matrix-check`, `emptiness`, `about-check`, `perf`. A terminal
+command passing is not visual completion — `emptiness.mjs` exists because the earlier
+band-based dead-space check reported clean pages that were visibly empty.
+
 ## Required skills — consult before any design or frontend work
 
 Before **any** visual design decision or frontend implementation work — page or component layout,

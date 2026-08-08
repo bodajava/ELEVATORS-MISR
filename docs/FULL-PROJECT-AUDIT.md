@@ -4,6 +4,13 @@
 **Scope:** `/Users/abdelrhmannounir/Desktop/REAL-ELEVATORS`
 **Mode:** Diagnosis and reporting only. No features were added, redesigned, or removed during this phase.
 
+> ### Superseded — see the final report
+>
+> [`FINAL-PRODUCTION-READINESS-REPORT.md`](FINAL-PRODUCTION-READINESS-REPORT.md) (2026-08-08) is
+> the current status of this project. It records the Contact rebuild, the AI concierge, the
+> first real performance measurement, the Bun/gstack installation, the git checkpoints, and the
+> two remaining blockers. This document is kept as the record of an earlier phase.
+
 > ### ⚠ Superseded in part — see §20, added 2026-08-08
 >
 > The audit below records the state on **2026-08-07**. The conversion-and-infrastructure phase

@@ -3,6 +3,13 @@
 **Date:** 2026-08-08 · **Scope:** `/Users/abdelrhmannounir/Desktop/REAL-ELEVATORS`
 **Preceded by:** [`FULL-PROJECT-AUDIT.md`](FULL-PROJECT-AUDIT.md) (2026-08-07) — see its §20 addendum.
 
+> ### Superseded — see the final report
+>
+> [`FINAL-PRODUCTION-READINESS-REPORT.md`](FINAL-PRODUCTION-READINESS-REPORT.md) (2026-08-08) is
+> the current status of this project. It records the Contact rebuild, the AI concierge, the
+> first real performance measurement, the Bun/gstack installation, the git checkpoints, and the
+> two remaining blockers. This document is kept as the record of an earlier phase.
+
 This phase turned the site's stated primary conversion from a placeholder into a working path: a
 visitor can now request a site inspection in either language, and the request is validated,
 rate-limited, screened for automation, persisted, and answered with a reference they can quote.
