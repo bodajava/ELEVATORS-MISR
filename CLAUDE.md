@@ -103,8 +103,20 @@ Binding outputs of Phase 0 that later work must respect:
   wholly excluded. The per-file register is `docs/asset-inventory.json` (`rights` field).
 - **People.** Everything in `assets/PHOTO WITH ACTORS/` shows identifiable individuals and is excluded
   pending per-person publication consent. Three of those files contain no elevator at all.
-- **Brand-name conflict.** Three videos have "ARAB EGYPT FOR ELEVATORS" burned in, which is not the
-  site's English brand name. Unresolved — do not ship those clips until the user decides.
+- **Brand-name conflict.** Several videos have "ARAB EGYPT FOR ELEVATORS" burned in, which is not
+  the site's English brand name. Unresolved — do not ship those clips until the user decides.
+  Three of them had reached the public set anyway and were withdrawn on 2026-08-09; see below.
+- **The shipping video set is four films, not nine** (since 2026-08-09). A frame-by-frame audit
+  of every shipping clip found five whose `rights` had never matched their content: two with the
+  brand-name watermark, one with that plus a third-party developer's "HYDE PARK DEVELOPMENT"
+  title card, and two showing identifiable people. Each had been recorded `clear` because its
+  note captured resolution or watermark-absence instead of what the footage shows. **Before
+  giving any asset a new destination, look at it** — `rights: clear` in
+  `docs/asset-inventory.json` has been wrong three times now, and widening `SHIPPABLE_ROLES`
+  publishes whatever that field claims.
+- **Derivatives outlive their manifest entry.** Excluding a clip stops the site linking to it but
+  leaves the generated file in `public/`, still a live URL. Delete the derivative too;
+  `tests/unit/media-rights.test.ts` fails on any orphan.
 - **No company PDF exists in this repository.** The "213 documented projects" figure the brief refers
   to cannot be verified from anything here. Claim no experience statistic until the PDF arrives.
 - **Folder numbering is not a project index.** `CONPONENTS/1`, `/2` and `/8` each break the
@@ -131,8 +143,8 @@ remaining credential list:
 [`docs/FINAL-PRODUCTION-READINESS-REPORT.md`](docs/FINAL-PRODUCTION-READINESS-REPORT.md).
 
 Verification harnesses live in `scripts/` and are run against a dev or production server:
-`hero-check`, `form-check`, `matrix-check`, `emptiness`, `about-check`, `perf`, `index-check`.
-A terminal
+`hero-check`, `form-check`, `matrix-check`, `emptiness`, `about-check`, `perf`, `index-check`,
+`marquee-check`. A terminal
 command passing is not visual completion — `emptiness.mjs` exists because the earlier
 band-based dead-space check reported clean pages that were visibly empty.
 

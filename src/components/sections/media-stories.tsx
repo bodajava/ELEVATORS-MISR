@@ -1,4 +1,4 @@
-import { FilmSlider, type FilmSlide } from '@/components/media/film-slider';
+import { FilmMarquee, type MarqueeFilm } from '@/components/media/film-marquee';
 import { Reveal } from '@/components/motion/reveal';
 import { Container } from '@/components/ui/container';
 import { SectionHeading } from '@/components/ui/section-heading';
@@ -36,9 +36,9 @@ export function MediaStories({ locale }: { locale: Locale }) {
   const films = productFilms();
   if (films.length === 0) return null;
 
-  // Resolved here, on the server. The slider receives strings, never callbacks — a server
+  // Resolved here, on the server. The strip receives strings, never callbacks — a server
   // component cannot hand a function across the client boundary.
-  const slides: FilmSlide[] = films.map((film, index) => {
+  const strip: MarqueeFilm[] = films.map((film) => {
     const project = getProject(film.projectSlug);
     return {
       video: film,
@@ -48,13 +48,6 @@ export function MediaStories({ locale }: { locale: Locale }) {
           ? 'Walkthrough of a finished panorama elevator installation'
           : 'جولة داخل تركيب مصعد بانوراما منفَّذ',
       title: project ? project.title[locale] : locale === 'en' ? 'On site' : 'في الموقع',
-      // Index and duration, in the annotation register. Both are facts about the file —
-      // nothing is claimed about the project that is not already verified.
-      meta: `${String(index + 1).padStart(2, '0')} · ${Math.round(film.durationSeconds)}s`,
-      dotLabel:
-        locale === 'en'
-          ? `Show film ${index + 1} of ${films.length}`
-          : `اعرض الفيلم ${index + 1} من ${films.length}`,
     };
   });
 
@@ -63,8 +56,8 @@ export function MediaStories({ locale }: { locale: Locale }) {
   // directly to Client Components".
   const labels =
     locale === 'en'
-      ? { carousel: 'carousel', slide: 'slide', group: 'Project films' }
-      : { carousel: 'شريط عرض', slide: 'شريحة', group: 'أفلام المشروعات' };
+      ? { group: 'Project films', pause: 'Pause the strip', play: 'Play the strip' }
+      : { group: 'أفلام المشروعات', pause: 'إيقاف الشريط', play: 'تشغيل الشريط' };
 
   return (
     <section className="py-20 lg:py-28">
@@ -76,12 +69,7 @@ export function MediaStories({ locale }: { locale: Locale }) {
         />
 
         <Reveal>
-          <FilmSlider
-            className="mt-12"
-            slides={slides}
-            dir={getDirection(locale)}
-            labels={labels}
-          />
+          <FilmMarquee className="mt-12" films={strip} dir={getDirection(locale)} labels={labels} />
         </Reveal>
       </Container>
     </section>

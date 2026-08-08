@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 
 /**
  * The rights gate, asserted against what actually shipped.
@@ -24,7 +24,7 @@ const manifest = JSON.parse(
 ) as {
   hero: { source: string } | null;
   images: { source: string; role: string }[];
-  videos: { source: string; role: string }[];
+  videos: { id: string; source: string; role: string }[];
 };
 
 const rightsOf = new Map(inventory.assets.map((a) => [a.path, a.rights]));
@@ -66,10 +66,62 @@ describe('rights gate', () => {
     }
   });
 
-  it('still ships the nine approved films — the gate must not over-block', () => {
-    expect(manifest.videos).toHaveLength(9);
+  it('still ships the four approved films — the gate must not over-block', () => {
+    // Was nine until 2026-08-09. A frame-by-frame audit of the whole shipping set, prompted
+    // by a third-party developer's title card appearing in the new homepage strip, found five
+    // clips whose `rights` had never matched their content: two with a burned-in "Arab Egypt
+    // for elevators" watermark, one with both that and a "HYDE PARK DEVELOPMENT" card, and two
+    // showing identifiable people. Each had been recorded as `clear` because its note captured
+    // resolution or watermark-absence rather than what the footage shows.
+    expect(manifest.videos).toHaveLength(4);
     for (const video of manifest.videos) {
       expect(rightsOf.get(video.source), video.source).toBe('clear');
+    }
+  });
+
+  it('keeps every clip carrying the wrong English brand name out of the shipping set', () => {
+    // "ARAB EGYPT FOR ELEVATORS" is burned into several originals and is not the site's
+    // English brand name. Phase 0 recorded the conflict as unresolved; these clips reached the
+    // shipping set anyway once `SHIPPABLE_ROLES` was widened, because the widening changed
+    // which *roles* ship without revisiting whether their `rights` were right.
+    const conflicted = inventory.assets.filter((a) => a.rights === 'brand-name-conflict');
+    expect(conflicted.length).toBeGreaterThan(0);
+    const sources = new Set(shipping.map((a) => a.source));
+    for (const asset of conflicted) {
+      expect(sources.has(asset.path), asset.path).toBe(false);
+    }
+  });
+
+  it('leaves no orphaned film or poster in public/', () => {
+    // Excluding a clip from the manifest stops the site linking to it. It does not delete the
+    // derivative the build already wrote, and `public/` is served as-is — so an unlinked file
+    // stays a live, fetchable URL. When five clips were reclassified on 2026-08-09 their ten
+    // derivatives were still on disk, including poster frames of an identifiable person and
+    // of a third-party developer's title card.
+    const shipped = new Set(manifest.videos.map((v) => v.id));
+    if (manifest.hero) shipped.add('hero');
+
+    const orphans = [];
+    for (const dir of ['videos', 'posters']) {
+      const at = new URL(`../../public/media/${dir}/`, import.meta.url);
+      if (!existsSync(at)) continue;
+      for (const file of readdirSync(at)) {
+        const id = file.replace(/\.[^.]+$/, '').replace(/-(desktop|mobile)$/, '');
+        if (id.startsWith('hero-')) continue;
+        if (!shipped.has(id)) orphans.push(`${dir}/${file}`);
+      }
+    }
+    expect(orphans).toEqual([]);
+  });
+
+  it('ships no video showing an identifiable person', () => {
+    const people = inventory.assets.filter(
+      (a) => a.kind === 'video' && a.rights === 'people-consent'
+    );
+    expect(people.length).toBeGreaterThan(0);
+    const sources = new Set(shipping.map((a) => a.source));
+    for (const asset of people) {
+      expect(sources.has(asset.path), asset.path).toBe(false);
     }
   });
 });

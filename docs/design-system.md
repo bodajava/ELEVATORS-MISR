@@ -216,6 +216,29 @@ Other rules:
   `maxImageWidth()`, not the widest — and the grid column should be `auto`, so the unused
   width goes to the content beside it instead of becoming dead air.
 
+### The film strip (marquee)
+
+The homepage films are a continuous band that never reaches an end, rather than a paged rail.
+Four rules make it work, and each was a bug first:
+
+- **The clip and the mover are different elements.** The animated transform must sit on an
+  inner track, never on the box that owns `overflow: hidden` — otherwise the clipping window
+  travels with the content, the trailing edge drains, and a hole grows until the loop restarts.
+- **Travel exactly one copy's width _plus the gap between copies_.** One gap short and the strip
+  stutters once per loop: small, regular, and impossible to un-see. The distance is measured
+  from the DOM, because each film is as wide as its own ratio needs.
+- **Enough copies to cover the screen behind the travel.** Two is only sufficient while one copy
+  is wider than the viewport. The count is derived from the tiles' aspect ratios at render time,
+  so a shrinking film set cannot silently start draining on a wide monitor.
+- **A real pause control.** Content that moves on its own for more than five seconds needs a
+  mechanism to stop it (WCAG 2.2.2). The toggle stops the travel _and_ the footage; hover and
+  focus pause it too. Under `prefers-reduced-motion` it never travels and becomes an ordinary
+  scrollable strip.
+
+Tiles share one height and take their width from each film's own ratio — the same film-strip
+rule the paged rail uses, for the same reason: a shared width letterboxes the portrait clips and
+crops the landscape ones. `scripts/marquee-check.mjs` asserts all of the above.
+
 ### Video behaviour
 
 All showcase video is silent, loops, and plays only when actually on screen. Two observers:
