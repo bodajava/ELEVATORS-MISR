@@ -1,0 +1,94 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+/test-results
+/playwright-report
+/blob-report
+/.playwright
+/playwright/.cache
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+Thumbs.db
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa*
+
+# debug / runtime logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files — never commit. `.env.example` is the only tracked one.
+.env
+.env.*
+!.env.example
+
+# local databases and dumps
+*.sqlite
+*.sqlite3
+*.db
+/pgdata
+*.dump
+*.sql.gz
+
+# vercel
+.vercel
+
+# Machine-local agent permission state. The skills in .claude/skills/ are project
+# infrastructure and stay tracked; this file is not.
+.claude/settings.local.json
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# Local measurement + capture output. These are working artefacts of the verification
+# harnesses (scripts/*.mjs) — regenerate them, don't track them. `.hero-check/` holds the
+# hero checkpoint screenshots; the harness itself is tracked.
+/.audit/
+/.shots/
+/.hero-check/
+/.stages/
+/.review/
+
+# Private source material — never commit, never publish.
+# Contains the company work-history record with client names and addresses.
+/reference/private/
+
+# ── Original media drop ──────────────────────────────────────────────────────
+# 187 MB of raw phone captures across 75 files. Deliberately untracked:
+#
+#   • It is a read-only drop. Nothing in this repository ever writes to `assets/`
+#     (CLAUDE.md forbids it), so version control has nothing to version.
+#   • Committing it makes every clone a 187 MB download, permanently — binaries can be
+#     removed from a working tree but not from history without a rewrite.
+#   • The web derivatives built from it (`public/media/`, 27 MB) ARE tracked, so a fresh
+#     clone builds, tests and deploys without the originals present.
+#
+# The originals must still be backed up — git is simply not the right place. If you would
+# rather track them, use Git LFS and delete this block; do not `git add -f` them into
+# ordinary object storage.
+/assets/

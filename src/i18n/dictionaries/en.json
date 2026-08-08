@@ -1,0 +1,78 @@
+{
+  "metadata": {
+    "defaultTitle": "Egypt Elevators — Panorama Elevators for Egyptian Architecture",
+    "defaultDescription": "Panorama elevators designed as part of the building, not an addition to it. Every project begins with a physical site inspection. Egypt Elevators, working across Egypt."
+  },
+  "nav": {
+    "home": "Home",
+    "panorama": "Panorama Elevators",
+    "projects": "Projects",
+    "process": "Process",
+    "about": "About",
+    "contact": "Contact",
+    "privacy": "Privacy",
+    "terms": "Terms",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "menuLabel": "Main navigation",
+    "skipToContent": "Skip to content",
+    "brandHome": "Egypt Elevators — home",
+    "breadcrumb": "Breadcrumb"
+  },
+  "cta": {
+    "requestInspection": "Request a site inspection",
+    "requestInspectionShort": "Book an inspection",
+    "exploreWork": "Explore our work",
+    "viewProject": "View project",
+    "viewAllProjects": "View all projects",
+    "askConcierge": "Ask a question",
+    "backToProjects": "Back to projects"
+  },
+  "language": {
+    "label": "Language",
+    "switchTo": "Switch to Arabic",
+    "current": "Current language: English"
+  },
+  "footer": {
+    "tagline": "Panorama elevators, across Egypt.",
+    "navHeading": "Explore",
+    "legalHeading": "Legal",
+    "contactHeading": "Get in touch",
+    "contactUnavailable": "Contact details are being confirmed. Request a site inspection and the team will reach you.",
+    "rights": "All rights reserved.",
+    "arabicName": "مصر العربية للمصاعد",
+    "noPricingNote": "Pricing follows the site inspection. We do not quote before measuring.",
+    "invitation": "Let's look at the space.",
+    "invitationBody": "Every project starts the same way — someone comes out, measures the building, and tells you what is actually possible in it.",
+    "coverageHeading": "Where we work",
+    "conciergeHeading": "Prefer to ask first?",
+    "conciergeBody": "The assistant can answer questions about panorama elevators and start an inspection request for you."
+  },
+  "common": {
+    "loading": "Loading",
+    "error": "Something went wrong",
+    "retry": "Try again",
+    "close": "Close",
+    "optional": "optional",
+    "required": "required",
+    "readMore": "Read more",
+    "play": "Play video",
+    "pause": "Pause video",
+    "muted": "Video plays without sound",
+    "unmute": "Turn on sound",
+    "mute": "Turn off sound"
+  },
+  "notFound": {
+    "title": "Page not found",
+    "description": "That page does not exist. The links below cover everything on the site.",
+    "backHome": "Back to home"
+  },
+  "error": {
+    "title": "Something went wrong",
+    "description": "This section failed to load. Reloading usually fixes it.",
+    "retry": "Reload"
+  },
+  "pageHeader": {
+    "home": "Home"
+  }
+}

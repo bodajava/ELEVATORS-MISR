@@ -1,0 +1,19 @@
+# pnpm workspace settings
+#
+# allowBuilds: pnpm blocks postinstall scripts by default (supply-chain safety).
+# Each package below genuinely needs its install script to fetch or compile a
+# native binary; without them the tool silently does nothing useful.
+allowBuilds:
+  '@parcel/watcher': true # next dev file watching on macOS
+  '@swc/core': true # transform pipeline used by Next and Vitest
+  esbuild: true # required by Vitest and tsx
+  sharp: true # image derivatives + next/image optimisation when self-hosted
+  unrs-resolver: true # eslint-plugin-import resolver
+
+# minimumReleaseAge: pnpm 11 refuses very recently published versions unless
+# explicitly excluded. These were reviewed and pinned deliberately.
+minimumReleaseAgeExclude:
+  - framer-motion@13.0.0
+  - motion-dom@13.0.0
+  - motion-utils@13.0.0
+  - motion@13.0.0

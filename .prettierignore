@@ -1,0 +1,12 @@
+.next/
+node_modules/
+pnpm-lock.yaml
+tsconfig.tsbuildinfo
+.shots/
+assets/
+public/media/
+reference/
+docs/asset-inventory.json
+.claude/
+skills-lock.json
+.audit/

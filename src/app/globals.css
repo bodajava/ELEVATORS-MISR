@@ -1,0 +1,529 @@
+@import 'tailwindcss';
+@import 'lenis/dist/lenis.css';
+
+/* ==========================================================================
+   Egypt Elevators — design tokens
+
+   DIRECTION: "Signal". A warm cream page, carbon-black anchor sections cut in
+   under large curves, and one electric orange that only ever means *act here*.
+
+   Why cream and carbon rather than the previous flat plaster: the page read as
+   pale and weightless, and the photography — overwhelmingly warm gold and
+   bronze — had nothing to push against. Carbon sections give the warm images an
+   edge to sit on, and the cream stays warm enough to belong to them.
+
+   Why orange, used sparingly: this system needs a conversion colour, and the
+   product's own world supplies it — the sodium glow of a lit car at night, the
+   safety marks on a shaft. #FF6B00 is deliberately electric rather than
+   terracotta, because terracotta on cream is the default "editorial luxury"
+   palette and this brand is not a stationery brand.
+
+   CONTRAST RULES, non-negotiable, checked not guessed:
+     · #FF6B00 on white is 2.9:1 — FAILS. Orange fills always carry carbon text
+       (6.8:1), never white.
+     · #FF6B00 as text on cream is 2.5:1 — FAILS. Small orange text uses
+       --color-accent-text (#A83F00, 5.3:1). Full-strength orange is for fills,
+       rules, and display-size type only.
+   ========================================================================== */
+
+@theme {
+  /* --- Ground: warm cream, warm white, warm grey ------------------------- */
+  --color-paper: #f3f0e8;
+  --color-paper-raised: #f8f5ee;
+  --color-paper-sunken: #e8e3d7;
+  --color-paper-edge: #d8d2c4;
+  /* Warm grey surface for cards that need to separate from the page. */
+  --color-surface: #ebe6da;
+
+  /* --- Carbon: the dark anchor sections and the media wells --------------- */
+  --color-aperture: #080d10;
+  --color-aperture-raised: #0f161a;
+  --color-carbon: #080d10;
+  --color-carbon-raised: #121a1f;
+
+  /* --- Ink: near-black editorial, not grey ------------------------------- */
+  --color-ink: #0b1013;
+  --color-ink-2: #3d464a;
+  --color-ink-3: #656e72;
+  --color-ink-on-dark: #f8f5ee;
+  --color-ink-2-on-dark: #a7afb3;
+
+  /* --- Signal orange ------------------------------------------------------
+     `accent` is the fill. `accent-hi` is the hover/active lift. `accent-text`
+     is the only orange permitted at body size on a light ground. */
+  --color-accent: #ff6b00;
+  --color-accent-hi: #ff7200;
+  --color-accent-text: #a83f00;
+  /* What sits *on* an orange fill. Never white — see the contrast rule above. */
+  --color-on-accent: #080d10;
+
+  /* --- Rules --------------------------------------------------------------
+     Hairlines carry the whole structure in this system, so they are tokens
+     rather than ad-hoc alpha values. */
+  --color-rule: color-mix(in oklab, #0b1013 18%, transparent);
+  --color-rule-strong: color-mix(in oklab, #0b1013 38%, transparent);
+  --color-rule-on-dark: color-mix(in oklab, #f8f5ee 20%, transparent);
+
+  /* --- Interaction -------------------------------------------------------- */
+  --color-focus: #0b1013;
+  --color-danger: #8f2d22;
+  --color-success: #2f5d3f;
+
+  /* --- Type -------------------------------------------------------------- */
+  --font-display: var(--font-display-latin), var(--font-arabic), Georgia, serif;
+  --font-body: var(--font-body-latin), var(--font-arabic), system-ui, sans-serif;
+  --font-arabic-stack: var(--font-arabic), system-ui, sans-serif;
+  --font-mono: var(--font-mono-latin), ui-monospace, monospace;
+
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 1.4;
+  --text-xs: 0.78125rem;
+  --text-xs--line-height: 1.5;
+  --text-sm: 0.875rem;
+  --text-sm--line-height: 1.6;
+  --text-base: 1.0625rem;
+  --text-base--line-height: 1.6;
+  --text-lg: 1.25rem;
+  --text-lg--line-height: 1.5;
+  --text-xl: 1.5rem;
+  --text-xl--line-height: 1.35;
+  --text-2xl: 2rem;
+  --text-2xl--line-height: 1.18;
+  --text-3xl: 2.75rem;
+  --text-3xl--line-height: 1.08;
+  --text-4xl: 3.75rem;
+  --text-4xl--line-height: 1.02;
+  --text-5xl: 5rem;
+  --text-5xl--line-height: 0.98;
+  --text-6xl: 7rem;
+  --text-6xl--line-height: 0.92;
+
+  --spacing: 0.25rem;
+
+  /* --- Radius: two scales, deliberately far apart -------------------------
+     Large curves on the things that are architecture — sections, media wells,
+     the hero cards. Compact curves on the things that are instruments —
+     buttons, inputs, chips. Nothing sits in between, so the contrast between
+     "surface" and "control" is legible at a glance. */
+  --radius-xs: 0.125rem;
+  --radius-control: 0.5rem;
+  --radius-control-lg: 0.75rem;
+  --radius-media: 1.25rem;
+  --radius-card: 1.5rem;
+  --radius-section: 2.5rem;
+  --radius-section-lg: 4rem;
+  /* Aliases kept so existing utilities resolve. */
+  --radius-sm: 0.5rem;
+  --radius-md: 1.25rem;
+  --radius-lg: 1.5rem;
+
+  /* --- Elevation ----------------------------------------------------------
+     Still restrained: depth comes from the carbon wells, not from drop
+     shadows. `float` is reserved for the genuinely floating surfaces (nav,
+     concierge, hero cards). */
+  --shadow-sm: 0 1px 2px color-mix(in oklab, #0b1013 8%, transparent);
+  --shadow-md: 0 12px 32px -16px color-mix(in oklab, #0b1013 30%, transparent);
+  --shadow-lg: 0 32px 64px -28px color-mix(in oklab, #0b1013 38%, transparent);
+  --shadow-float:
+    0 1px 1px color-mix(in oklab, #0b1013 4%, transparent),
+    0 8px 24px -12px color-mix(in oklab, #0b1013 28%, transparent),
+    0 24px 56px -24px color-mix(in oklab, #0b1013 26%, transparent);
+  /* Hero media cards: a tight contact shadow plus a long soft one. */
+  --shadow-card:
+    0 2px 6px -2px color-mix(in oklab, #0b1013 22%, transparent),
+    0 28px 60px -28px color-mix(in oklab, #0b1013 45%, transparent);
+
+  /* --- Liquid glass -------------------------------------------------------
+     Used on five surfaces only (nav, concierge, media controller, project
+     viewer, toasts). backdrop-filter is expensive and the UX database rates
+     its performance moderate-poor, so it is not a general-purpose surface. */
+  --glass-blur: 20px;
+  --glass-saturate: 180%;
+
+  /* --- Motion ------------------------------------------------------------
+     The travel curve is the system's signature easing: a car leaves quickly
+     and settles slowly into a floor. Mirrored in GSAP as CustomEase "travel". */
+  --ease-travel: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+
+  --duration-instant: 120ms;
+  --duration-fast: 220ms;
+  --duration-base: 380ms;
+  --duration-slow: 620ms;
+
+  /* --- Layout ------------------------------------------------------------ */
+  --container-text: 40rem;
+  --container-wide: 82rem;
+  --container-page: 100rem;
+
+  /* Gutter, used by the rule grid so hairlines land on the same axis as text. */
+  --gutter: 1.25rem;
+}
+
+@media (min-width: 640px) {
+  :root {
+    --gutter: 2rem;
+  }
+}
+@media (min-width: 1024px) {
+  :root {
+    --gutter: 3rem;
+  }
+}
+
+:root {
+  color-scheme: light;
+}
+
+/* ==========================================================================
+   Base
+   ========================================================================== */
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+    min-width: 0;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-body);
+    font-size: var(--text-base);
+    line-height: var(--text-base--line-height);
+    font-feature-settings: 'ss01';
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: clip;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    /* Heavier and tighter than before. The previous 500 / -0.028em read as
+       polite; this brief asks for editorial confidence, and Bricolage carries
+       weight at display sizes without turning into a slab. */
+    font-weight: 700;
+    letter-spacing: -0.038em;
+    text-wrap: balance;
+    /* Narrow the display face at large sizes: the shaft is a vertical form, and
+       condensing the headline echoes it without resorting to a novelty face. */
+    font-variation-settings: 'wdth' 88;
+  }
+
+  /* Display-scale headings tighten further — tracking that reads as confident
+     at 7rem reads as broken at 1.25rem, so it scales with the type. */
+  .text-4xl,
+  .text-5xl,
+  .text-6xl,
+  .text-display {
+    letter-spacing: -0.048em;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  /* Arabic: its own family, its own metrics. Alexandria sits smaller on the
+     line than the Latin faces, so it is nudged up and given more leading. */
+  :lang(ar) {
+    font-family: var(--font-arabic-stack);
+    line-height: 1.9;
+  }
+
+  :lang(ar) h1,
+  :lang(ar) h2,
+  :lang(ar) h3,
+  :lang(ar) h4 {
+    font-family: var(--font-arabic-stack);
+    font-weight: 400;
+    line-height: 1.4;
+    /* Arabic is a connected script — tracking and width axes break the joins. */
+    letter-spacing: normal;
+    font-variation-settings: normal;
+  }
+
+  /* Unlayered below, so these beat Tailwind's tracking-* and uppercase utilities. */
+
+  :focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 3px;
+    border-radius: var(--radius-xs);
+  }
+
+  ::selection {
+    background-color: var(--color-ink);
+    color: var(--color-paper);
+  }
+
+  img,
+  video {
+    max-width: 100%;
+    height: auto;
+  }
+
+  .numeric,
+  time,
+  [data-numeric] {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum' 1;
+  }
+}
+
+/* ==========================================================================
+   Arabic corrections — unlayered so they win over utilities
+   ========================================================================== */
+
+:lang(ar) {
+  letter-spacing: normal;
+}
+
+:lang(ar) {
+  text-transform: none;
+}
+
+/* ==========================================================================
+   Reduced motion
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* Anything GSAP or CSS would have revealed must be visible regardless. */
+  [data-reveal],
+  [data-reveal] > * {
+    opacity: 1 !important;
+    transform: none !important;
+    clip-path: none !important;
+  }
+}
+
+/* ==========================================================================
+   Utilities
+   ========================================================================== */
+
+/* The signature. A dark well cut into the page, which media travels through.
+   Generously curved, hairline-edged, and always darker than the page so the
+   photography reads as something seen *into* rather than placed on top. */
+@utility aperture {
+  position: relative;
+  isolation: isolate;
+  overflow: clip;
+  background-color: var(--color-aperture);
+  border-radius: var(--radius-media);
+}
+
+/* Masked reveal target for GSAP: the child is clipped to the aperture and
+   rises into it. The mask lives here so the JS only animates transforms. */
+@utility aperture-mask {
+  overflow: clip;
+  clip-path: inset(0 round var(--radius-media));
+}
+
+/* ---------------------------------------------------------------------------
+   Liquid glass
+   Two variants, because the same blur over cream and over carbon needs
+   different tint and border to stay legible. Both keep their text at AA — the
+   UX database flags text contrast as this style's characteristic failure.
+   Falls back to an opaque tint where backdrop-filter is unsupported.
+   --------------------------------------------------------------------------- */
+@utility glass {
+  background-color: color-mix(in oklab, var(--color-paper-raised) 72%, transparent);
+  border: 1px solid color-mix(in oklab, #ffffff 65%, transparent);
+  box-shadow:
+    var(--shadow-float),
+    inset 0 1px 0 color-mix(in oklab, #ffffff 70%, transparent);
+
+  @supports (backdrop-filter: blur(1px)) {
+    background-color: color-mix(in oklab, var(--color-paper-raised) 55%, transparent);
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  }
+}
+
+@utility glass-dark {
+  background-color: color-mix(in oklab, var(--color-carbon) 82%, transparent);
+  border: 1px solid color-mix(in oklab, var(--color-ink-on-dark) 16%, transparent);
+  color: var(--color-ink-on-dark);
+  box-shadow:
+    var(--shadow-float),
+    inset 0 1px 0 color-mix(in oklab, var(--color-ink-on-dark) 14%, transparent);
+
+  @supports (backdrop-filter: blur(1px)) {
+    background-color: color-mix(in oklab, var(--color-carbon) 62%, transparent);
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  }
+}
+
+/* The pointer-light highlight on a glass surface. The component writes
+   --mx/--my as percentages from a pointermove listener; with no listener (or
+   on touch) the gradient sits centred and is effectively invisible. */
+@utility glass-lit {
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background: radial-gradient(
+      circle at var(--mx, 50%) var(--my, 50%),
+      color-mix(in oklab, #ffffff 22%, transparent),
+      transparent 55%
+    );
+    opacity: 0;
+    transition: opacity var(--duration-base) var(--ease-standard);
+  }
+
+  &:hover::after {
+    opacity: 1;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Large curved section transitions
+   A carbon section rises into the cream page under a wide radius, rather than
+   meeting it on a straight seam. This is the system's structural signature.
+   --------------------------------------------------------------------------- */
+@utility curve-t {
+  border-start-start-radius: var(--radius-section);
+  border-start-end-radius: var(--radius-section);
+
+  @media (min-width: 1024px) {
+    border-start-start-radius: var(--radius-section-lg);
+    border-start-end-radius: var(--radius-section-lg);
+  }
+}
+
+@utility curve-b {
+  border-end-start-radius: var(--radius-section);
+  border-end-end-radius: var(--radius-section);
+
+  @media (min-width: 1024px) {
+    border-end-start-radius: var(--radius-section-lg);
+    border-end-end-radius: var(--radius-section-lg);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Orange interaction primitives
+   --------------------------------------------------------------------------- */
+
+/* A CTA whose orange arrives directionally on hover rather than snapping.
+   The fill is a pseudo-element scaling on one axis, so nothing lays out. */
+@utility fill-directional {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background-color: var(--color-accent-hi);
+    transform: scaleY(0);
+    transform-origin: bottom;
+    transition: transform var(--duration-base) var(--ease-travel);
+  }
+
+  &:hover::before,
+  &:focus-visible::before {
+    transform: scaleY(1);
+  }
+}
+
+/* A link whose label is replaced by a copy of itself sliding up through a
+   mask. The duplicate is aria-hidden in the component. */
+@utility link-masked {
+  position: relative;
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: bottom;
+
+  & > [data-masked-in],
+  & > [data-masked-out] {
+    display: block;
+    transition: transform var(--duration-base) var(--ease-travel);
+  }
+
+  & > [data-masked-in] {
+    position: absolute;
+    inset: 0;
+    transform: translateY(100%);
+    color: var(--color-accent-text);
+  }
+
+  &:hover > [data-masked-out],
+  &:focus-visible > [data-masked-out] {
+    transform: translateY(-100%);
+  }
+
+  &:hover > [data-masked-in],
+  &:focus-visible > [data-masked-in] {
+    transform: translateY(0);
+  }
+}
+
+/* Hairline rule matching the page grid. */
+@utility rule-t {
+  border-top: 1px solid var(--color-rule);
+}
+@utility rule-b {
+  border-bottom: 1px solid var(--color-rule);
+}
+
+/* Annotation type: the drawing-label layer. */
+@utility annotation {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-ink-3);
+}
+
+@utility skip-link {
+  position: fixed;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  transform: translateY(-200%);
+  transition: transform var(--duration-fast) var(--ease-standard);
+  z-index: 100;
+
+  &:focus,
+  &:focus-visible {
+    transform: translateY(0);
+  }
+}
+
+/* Directional icons mirror in RTL; non-directional ones must not. Opt in. */
+@utility icon-directional {
+  [dir='rtl'] & {
+    transform: scaleX(-1);
+  }
+}
+
+/* Lenis is disabled under reduced motion; make sure the page still scrolls. */
+@media (prefers-reduced-motion: reduce) {
+  html.lenis,
+  html.lenis body {
+    height: auto;
+  }
+}
