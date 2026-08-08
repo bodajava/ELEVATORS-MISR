@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 
 import { Reveal } from '@/components/motion/reveal';
+import { ProjectIndex, type IndexEntry } from '@/components/projects/project-index';
 import { ProjectMatrix } from '@/components/projects/project-matrix';
 import { Breadcrumbs } from '@/components/ui/breadcrumbs';
 import { Container } from '@/components/ui/container';
@@ -11,6 +12,7 @@ import { InspectionCta } from '@/components/sections/inspection-cta';
 import { projectsPage } from '@/content/pages';
 import { finishLabels, projects, type Finish } from '@/content/projects';
 import { isLocale, type Locale } from '@/i18n/config';
+import { bestImageFor, maxImageWidth } from '@/lib/media';
 import { buildAlternates } from '@/lib/seo/metadata';
 
 export async function generateMetadata({
@@ -48,6 +50,30 @@ export default async function ProjectsPage({ params }: { params: Promise<{ local
     items: projects.filter((p) => p.finish === finish).sort((a, b) => a.order - b.order),
   }));
 
+  // The index band. Everything the client component needs is resolved here to plain strings
+  // and numbers — a function or an asset object crossing the server/client boundary is what
+  // took the homepage down once already.
+  const entries: IndexEntry[] = projects
+    .map((project) => {
+      const image = bestImageFor(project.slug);
+      if (!image) return null;
+      return {
+        slug: project.slug,
+        title: project.title[l],
+        alt: project.alt[l],
+        finish: finishLabels[project.finish][l],
+        src: image.src,
+        srcSet: image.sources.webp.map((s) => `${s.src} ${s.width}w`).join(', '),
+        width: image.width,
+        height: image.height,
+      } satisfies IndexEntry;
+    })
+    .filter((entry): entry is IndexEntry => entry !== null);
+
+  // The narrowest source governs: the frame is shared, so it may not be drawn wider than the
+  // smallest photograph in the set can honestly fill.
+  const frameWidth = entries.length > 0 ? Math.min(...entries.map((e) => maxImageWidth(e))) : 0;
+
   return (
     <>
       <Container width="wide" className="pt-32 pb-8 lg:pt-40">
@@ -58,6 +84,18 @@ export default async function ProjectsPage({ params }: { params: Promise<{ local
             eyebrow={projectsPage.countLabel[l](projects.length)}
             title={projectsPage.heading[l]}
             lede={projectsPage.lede[l]}
+          />
+        </Reveal>
+      </Container>
+
+      {/* The contents page: every installation named once, with its frame beside the list.
+          Replaces a text-only opening screen on a page whose subject is photography. */}
+      <Container width="wide" className="pb-16 lg:pb-24">
+        <Reveal>
+          <ProjectIndex
+            entries={entries}
+            frameLabel={projectsPage.indexFrameLabel[l]}
+            maxFrameWidth={frameWidth}
           />
         </Reveal>
       </Container>

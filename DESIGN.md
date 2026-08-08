@@ -431,6 +431,16 @@ Arabic is a first-class system.
 - Numerals: phone numbers and reference codes are forced `dir="ltr"` inside RTL copy, because
   otherwise the digit groups render in the wrong order.
 - Arabic copy is **written as Arabic**, not translated word-for-word from English.
+- **Never split Arabic text into characters.** Arabic is cursive: each letter's glyph depends on
+  its neighbours, so wrapping every character in its own element severs the joins and the
+  browser falls back to isolated forms — the word stops being the word. Per-character text
+  effects (staggers, reveals, split-text animation) must switch their unit to the **word** when
+  the string contains Arabic. `splitText` in `components/ui/animated-slideshow.tsx` is the
+  reference implementation; `scripts/index-check.mjs` asserts the token count matches the word
+  count in `ar` and the character count in `en`.
+- **Arabic titles run longer than their English counterparts.** A list that holds one line per
+  row in English can wrap every row in Arabic and double in height, which moves everything
+  below it. Size list type against the Arabic string, not the English one.
 
 ---
 

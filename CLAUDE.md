@@ -131,7 +131,8 @@ remaining credential list:
 [`docs/FINAL-PRODUCTION-READINESS-REPORT.md`](docs/FINAL-PRODUCTION-READINESS-REPORT.md).
 
 Verification harnesses live in `scripts/` and are run against a dev or production server:
-`hero-check`, `form-check`, `matrix-check`, `emptiness`, `about-check`, `perf`. A terminal
+`hero-check`, `form-check`, `matrix-check`, `emptiness`, `about-check`, `perf`, `index-check`.
+A terminal
 command passing is not visual completion — `emptiness.mjs` exists because the earlier
 band-based dead-space check reported clean pages that were visibly empty.
 

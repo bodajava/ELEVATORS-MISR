@@ -17,6 +17,8 @@ export const projectsPage: {
   lede: Bilingual;
   filterAll: Bilingual;
   filterLabel: Bilingual;
+  /** Accessible name of the index band's frame, which links to the selected installation. */
+  indexFrameLabel: Bilingual;
   countLabel: Record<Locale, (n: number) => string>;
 } = {
   title: { en: 'Projects', ar: 'المشروعات' },
@@ -31,6 +33,7 @@ export const projectsPage: {
   },
   filterAll: { en: 'All finishes', ar: 'كل التشطيبات' },
   filterLabel: { en: 'Filter by finish', ar: 'تصفية حسب التشطيب' },
+  indexFrameLabel: { en: 'Open this installation', ar: 'افتح هذا العمل' },
   countLabel: {
     en: (n) => `${n} ${n === 1 ? 'installation' : 'installations'}`,
     ar: (n) => (n === 1 ? 'عمل واحد' : `${n} أعمال`),

@@ -332,6 +332,12 @@
   html {
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
+
+    /* The header is fixed, so anything scrolled into view — a fragment link, the
+       skip-to-content link, `scrollIntoView` — otherwise lands underneath it and the first
+       lines of the target are hidden. Reserving the header's height here fixes every one of
+       those at once rather than per anchor. */
+    scroll-padding-top: 6.5rem;
   }
 
   body {

@@ -205,6 +205,16 @@ Other rules:
 - Frames keep their source orientation where forcing a common ratio would crop the subject —
   the social-proof row is a contact sheet with a ragged bottom edge, by design.
 - Watermarks are shown honestly. Crops are planned around them, never through them.
+- **A stack of frames sharing one opening must be taken out of flow.** Where several images
+  occupy the same grid cell so one can be revealed at a time, leaving them in flow lets the
+  auto-sized row grow to the tallest _intrinsic_ height in the set — the narrowest source. On
+  `/projects` that made every frame 721px inside a 438px aperture, clipped from the bottom, so
+  `object-center` centred nothing. `absolute inset-0` on each frame hands the box back to the
+  aperture's aspect ratio. `scripts/index-check.mjs` asserts every stacked frame matches the
+  opening to within a pixel.
+- Where one opening is shared by a set, its width cap is the **narrowest** source's
+  `maxImageWidth()`, not the widest — and the grid column should be `auto`, so the unused
+  width goes to the content beside it instead of becoming dead air.
 
 ### Video behaviour
 

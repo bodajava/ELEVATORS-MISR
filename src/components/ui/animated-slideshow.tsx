@@ -28,6 +28,15 @@ import { cn } from '@/lib/utils';
 interface TextStaggerHoverProps {
   text: string;
   index: number;
+  /**
+   * How the line looks before it is selected.
+   *
+   * The upstream component hard-codes `opacity-30` here. On this palette that puts the
+   * resting titles at roughly 1.5:1 against the page — and these are the names of the
+   * installations, body content rather than decoration, so they have to stay readable when
+   * nothing is hovered. Callers pass a real colour token; the default is the annotation ink.
+   */
+  restingClassName?: string;
 }
 
 interface HoverSliderImageProps {
@@ -40,10 +49,31 @@ interface HoverSliderContextValue {
   changeSlide: (index: number) => void;
 }
 
-function splitText(text: string) {
+/**
+ * Arabic is cursive: every letter changes shape according to its neighbours. Splitting
+ * `'نحاس وزجاج'` into `['ن','ح','ا','س', …]` and wrapping each in its own element severs
+ * those joins, and the browser falls back to the isolated form of each letter — the word
+ * stops being the word. The upstream component splits unconditionally, which would have
+ * shipped mangled type on every Arabic page.
+ *
+ * So the unit of animation is script-dependent: Latin staggers per character, Arabic staggers
+ * per word, which keeps each word's shaping intact while still reading as a stagger.
+ */
+const ARABIC = /[؀-ۿݐ-ݿﭐ-﷿ﹰ-﻿]/;
+
+/**
+ * Split into words first, then into animation units inside each word.
+ *
+ * The nesting is not cosmetic. Flattening straight to characters — which the upstream
+ * component does — makes every character its own inline-block, and the browser will then
+ * break a line between any two of them: "a classic / al hall", "timbe / r stair". Keeping the
+ * word as a `whitespace-nowrap` wrapper restores normal word-boundary wrapping while the
+ * characters inside it still animate one by one.
+ */
+function splitText(text: string): string[][] {
   const words = text.split(' ').map((word) => word.concat(' '));
-  const characters = words.map((word) => word.split('')).flat(1);
-  return { words, characters };
+  if (ARABIC.test(text)) return words.map((word) => [word]);
+  return words.map((word) => word.split(''));
 }
 
 const HoverSliderContext = React.createContext<HoverSliderContextValue | undefined>(undefined);
@@ -54,6 +84,17 @@ function useHoverSliderContext() {
     throw new Error('useHoverSliderContext must be used within a HoverSlider');
   }
   return context;
+}
+
+/**
+ * Read the active slide from outside the built-in parts.
+ *
+ * Selecting a title is not navigating to it, so a caller that wants the revealed frame to be
+ * a link needs the index. Exported rather than duplicated as a second piece of state, which
+ * would let the frame and the link drift apart.
+ */
+export function useHoverSlide() {
+  return useHoverSliderContext();
 }
 
 export const HoverSlider = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
@@ -76,11 +117,18 @@ HoverSlider.displayName = 'HoverSlider';
 export const TextStaggerHover = React.forwardRef<
   HTMLButtonElement,
   Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'onSelect'> & TextStaggerHoverProps
->(({ text, index, className, ...props }, ref) => {
+>(({ text, index, restingClassName = 'text-ink-3', className, ...props }, ref) => {
   const { activeSlide, changeSlide } = useHoverSliderContext();
-  const { characters } = splitText(text);
+  const words = splitText(text);
   const isActive = activeSlide === index;
   const select = () => changeSlide(index);
+  // Stagger runs across the whole line, so the delay keeps counting across word boundaries
+  // rather than restarting inside each word. Precomputed rather than incremented during the
+  // render pass, which is a closure write React cannot guarantee the ordering of.
+  const wordOffsets = words.reduce<number[]>(
+    (acc, word, i) => [...acc, (acc[i - 1] ?? 0) + (words[i - 1]?.length ?? 0)],
+    []
+  );
 
   return (
     // A real button: hover is a convenience, not the only way in.
@@ -98,36 +146,45 @@ export const TextStaggerHover = React.forwardRef<
       )}
       {...props}
     >
-      {characters.map((char, charIndex) => (
-        <span
-          key={`${char}-${charIndex}`}
-          aria-hidden
-          className="relative inline-block overflow-hidden"
-        >
-          <MotionConfig
-            transition={{
-              delay: charIndex * 0.025,
-              duration: 0.3,
-              ease: [0.25, 0.46, 0.45, 0.94],
-            }}
-          >
-            <motion.span
-              className="inline-block opacity-30"
-              initial={{ y: '0%' }}
-              animate={isActive ? { y: '-110%' } : { y: '0%' }}
-            >
-              {char}
-              {char === ' ' && charIndex < characters.length - 1 && <>&nbsp;</>}
-            </motion.span>
+      {words.map((chars, wordIndex) => (
+        // The word is the wrapping unit; the characters inside it are the animation unit.
+        <span key={`w-${wordIndex}`} aria-hidden className="inline-block whitespace-nowrap">
+          {chars.map((char, charIndex) => {
+            const unit = (wordOffsets[wordIndex] ?? 0) + charIndex;
+            return (
+              <span
+                key={`${char}-${charIndex}`}
+                className="relative inline-block overflow-hidden align-bottom"
+              >
+                <MotionConfig
+                  transition={{
+                    delay: unit * 0.025,
+                    duration: 0.3,
+                    ease: [0.25, 0.46, 0.45, 0.94],
+                  }}
+                >
+                  {/* `whitespace-pre` rather than an `&nbsp;` special case: the tokens already
+                      carry their own trailing space, and an inline-block would otherwise
+                      collapse it — which for Arabic word tokens runs the line together. */}
+                  <motion.span
+                    className={cn('inline-block whitespace-pre', restingClassName)}
+                    initial={{ y: '0%' }}
+                    animate={isActive ? { y: '-110%' } : { y: '0%' }}
+                  >
+                    {char}
+                  </motion.span>
 
-            <motion.span
-              className="absolute start-0 top-0 inline-block opacity-100"
-              initial={{ y: '110%' }}
-              animate={isActive ? { y: '0%' } : { y: '110%' }}
-            >
-              {char}
-            </motion.span>
-          </MotionConfig>
+                  <motion.span
+                    className="absolute start-0 top-0 inline-block whitespace-pre"
+                    initial={{ y: '110%' }}
+                    animate={isActive ? { y: '0%' } : { y: '110%' }}
+                  >
+                    {char}
+                  </motion.span>
+                </MotionConfig>
+              </span>
+            );
+          })}
         </span>
       ))}
 
