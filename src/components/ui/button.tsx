@@ -23,7 +23,7 @@ import { cn } from '@/lib/utils';
  */
 const buttonVariants = cva(
   [
-    'group/btn relative inline-flex items-center justify-center gap-3 whitespace-nowrap',
+    'group/btn relative inline-flex max-w-full items-center justify-center gap-3 whitespace-nowrap',
     'font-body font-semibold tracking-[-0.01em]',
     'rounded-(--radius-control) border cursor-pointer select-none',
     'min-h-11 transition-[background-color,border-color,color,transform] duration-fast ease-standard',
@@ -48,8 +48,12 @@ const buttonVariants = cva(
       },
       size: {
         sm: 'min-w-11 px-4 py-2 text-xs',
-        md: 'min-w-11 px-6 py-3 text-sm',
-        lg: 'min-w-11 px-8 py-4 text-base',
+        md: 'min-w-11 px-5 py-3 text-sm sm:px-6',
+        // Padding steps down at the narrowest widths. "Request a site inspection" at
+        // `text-base` with `px-8` measures ~292px, which overflows a 320px viewport once the
+        // page gutter is taken off — measured, and it clipped the CTA on every page carrying
+        // it, not just one.
+        lg: 'min-w-11 px-6 py-4 text-base sm:px-8',
         icon: 'size-11 min-w-11 p-0',
       },
     },

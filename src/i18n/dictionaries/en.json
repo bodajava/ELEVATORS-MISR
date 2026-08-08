@@ -60,7 +60,11 @@
     "pause": "Pause video",
     "muted": "Video plays without sound",
     "unmute": "Turn on sound",
-    "mute": "Turn off sound"
+    "mute": "Turn off sound",
+    "previous": "Previous",
+    "next": "Next",
+    "filmsHeading": "Project films",
+    "showAll": "Show all"
   },
   "notFound": {
     "title": "Page not found",

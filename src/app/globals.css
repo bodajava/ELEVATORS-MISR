@@ -527,3 +527,34 @@
     height: auto;
   }
 }
+
+/* ==========================================================================
+   Ambient field
+   The cursor parts are revealed only when the AmbientField effect has confirmed
+   a fine pointer and no reduced-motion preference. Keeping the gate in CSS means
+   the markup is identical on every device and there is no hydration branch.
+   ========================================================================== */
+[data-ambient][data-state='live'] [data-cursor-ring],
+[data-ambient][data-state='live'] [data-cursor-dot],
+[data-ambient][data-state='live'] [data-cursor-glow] {
+  display: block;
+}
+
+/* ==========================================================================
+   Bottom navigation clearance
+   The mobile bar floats over the page, so the document reserves exactly its height
+   plus the safe-area inset. Without this the last section of every page sits under
+   the bar — including the inspection CTA, which is the one thing that must never be
+   covered.
+   ========================================================================== */
+:root {
+  --bottom-nav-space: 0px;
+}
+@media (max-width: 1023px) {
+  :root {
+    --bottom-nav-space: calc(4.75rem + env(safe-area-inset-bottom));
+  }
+}
+body {
+  padding-bottom: var(--bottom-nav-space);
+}

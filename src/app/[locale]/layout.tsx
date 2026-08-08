@@ -3,14 +3,17 @@ import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import type { Metadata, Viewport } from 'next';
 
+import { Concierge } from '@/components/concierge/concierge';
+import { AmbientField } from '@/components/motion/ambient-field';
 import { SmoothScroll } from '@/components/motion/smooth-scroll';
-import { MobileCtaBar } from '@/components/layout/mobile-cta-bar';
+import { BottomNav } from '@/components/navigation/bottom-nav';
 import { SiteFooter } from '@/components/layout/site-footer';
 import { SiteHeader } from '@/components/layout/site-header';
 import { SkipLink } from '@/components/layout/skip-link';
 import { brand, siteUrl } from '@/content/company';
 import { getDirection, localeTags, locales, openGraphLocales, type Locale } from '@/i18n/config';
 import { routing } from '@/i18n/routing';
+import { conciergeAvailability } from '@/lib/concierge/provider';
 import { fontVariables } from '@/lib/fonts';
 
 import '../globals.css';
@@ -99,6 +102,10 @@ export default async function LocaleLayout({
       suppressHydrationWarning
     >
       <body className="min-h-dvh bg-paper text-ink antialiased">
+        {/* One shared background + cursor system for every page. Fixed, behind
+            everything, pointer-events: none. See AmbientField. */}
+        <AmbientField />
+
         <NextIntlClientProvider>
           <SmoothScroll>
             <SkipLink />
@@ -107,7 +114,14 @@ export default async function LocaleLayout({
               {children}
             </main>
             <SiteFooter locale={typedLocale} />
-            <MobileCtaBar />
+            {/* The mobile bar replaces both the collapsed navigation and the old sticky
+                CTA — two fixed elements competing for the same corner of the screen was
+                the reason the CTA overlapped the spec rail. */}
+            <BottomNav />
+
+            {/* Availability is resolved on the server: the client is told only whether the
+                assistant works, never which provider or whether a key exists. */}
+            <Concierge locale={typedLocale} available={conciergeAvailability().available} />
           </SmoothScroll>
         </NextIntlClientProvider>
       </body>

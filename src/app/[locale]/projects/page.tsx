@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 
 import { Reveal } from '@/components/motion/reveal';
-import { ProjectCard } from '@/components/projects/project-card';
+import { ProjectMatrix } from '@/components/projects/project-matrix';
 import { Breadcrumbs } from '@/components/ui/breadcrumbs';
 import { Container } from '@/components/ui/container';
 import { SectionHeading } from '@/components/ui/section-heading';
@@ -76,16 +76,8 @@ export default async function ProjectsPage({ params }: { params: Promise<{ local
               </div>
             </Reveal>
 
-            <div className="mt-12 grid gap-x-8 gap-y-16 sm:grid-cols-2 lg:grid-cols-3">
-              {items.map((project, index) => (
-                <Reveal key={project.slug} delay={0.05 * (index % 3)}>
-                  <ProjectCard
-                    project={project}
-                    locale={l}
-                    priority={groupIndex === 0 && index === 0}
-                  />
-                </Reveal>
-              ))}
+            <div className="mt-12">
+              <ProjectMatrix items={items} locale={l} priorityFirst={groupIndex === 0} />
             </div>
           </Container>
         </section>

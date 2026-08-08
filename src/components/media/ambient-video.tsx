@@ -31,6 +31,9 @@ export function AmbientVideo({
   maxWidth,
   /** Hide the controller entirely for purely decorative background footage. */
   decorative = false,
+  /** Permission to autoplay. See useVideoAutoplay — the rail uses this to keep one film
+      decoding at a time even when two slides are fully on screen. */
+  active = true,
 }: {
   video: VideoAsset;
   className?: string;
@@ -38,8 +41,9 @@ export function AmbientVideo({
   label: string;
   maxWidth?: number;
   decorative?: boolean;
+  active?: boolean;
 }) {
-  const { ref, armed, playing } = useVideoAutoplay();
+  const { ref, armed, playing } = useVideoAutoplay({ active });
   const [muted, setMuted] = useState(true);
   const t = useTranslations('common');
   const controllerRef = useRef<HTMLDivElement>(null);

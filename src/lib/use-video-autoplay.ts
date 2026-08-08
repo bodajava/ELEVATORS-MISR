@@ -27,7 +27,17 @@ import { useEffect, useRef, useState } from 'react';
 export function useVideoAutoplay({
   /** Skip entirely — used for the manual/testimonial presentation. */
   enabled = true,
-}: { enabled?: boolean } = {}) {
+  /**
+   * Permission to play, independent of visibility.
+   *
+   * Visibility alone is not enough inside a horizontal rail: two slides can be 100% within
+   * the viewport at once, and the observer would happily start both. The site's rule is that
+   * no more than one content video is ever decoding, so the rail passes `false` for every
+   * slide but the active one. Arming and download are unaffected — a slide that is about to
+   * become active should already have its source.
+   */
+  active = true,
+}: { enabled?: boolean; active?: boolean } = {}) {
   const ref = useRef<HTMLVideoElement>(null);
   /** True once the source has been attached, so the component can render <source>. */
   const [armed, setArmed] = useState(false);
@@ -61,7 +71,7 @@ export function useVideoAutoplay({
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting && !reduced.matches) {
+        if (entry.isIntersecting && active && !reduced.matches) {
           // Belt and braces: the element is muted in markup, but a stale `muted = false` from
           // a previous unmute must never survive into an autoplay.
           el.muted = true;
@@ -86,7 +96,7 @@ export function useVideoAutoplay({
       el.removeEventListener('play', onPlay);
       el.removeEventListener('pause', onPause);
     };
-  }, [enabled, armed]);
+  }, [enabled, armed, active]);
 
   return { ref, armed, playing, setArmed };
 }

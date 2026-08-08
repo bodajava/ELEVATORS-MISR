@@ -4,49 +4,43 @@ import Image from 'next/image';
 import { useRef } from 'react';
 
 import type { Locale } from '@/i18n/config';
-import { gsap, ScrollTrigger, useGSAP } from '@/lib/gsap';
+import { gsap, useGSAP } from '@/lib/gsap';
 import type { ImageAsset } from '@/lib/media';
+import { cn } from '@/lib/utils';
 
 type Floor = {
-  /** Finish and setting, both verified from the photograph. Fills the caption column. */
   meta: { label: string; value: string }[];
   image: ImageAsset;
   alt: string;
   title: string;
   note: string;
-  /** Widest honest render for this frame, in CSS px. See maxImageWidth(). */
   maxWidth: number;
 };
 
 /**
- * The ascent — the pinned scroll sequence.
+ * The ascent — five installations, one dense composition.
  *
- * A fixed frame, and the visitor scrolls a stack of installations up through it one floor at
- * a time, with a counter ticking alongside. The product's own mechanic becomes the page's
- * navigation: content arrives the way a car arrives at a floor.
+ * ── What this replaces, and why ─────────────────────────────────────────────
+ * A pinned sequence that showed **one** installation at a time in a full viewport: a caption
+ * in the lower-left corner and a single portrait frame on the right. Measured coverage was
+ * 22% of the screen — four fifths of it was cream. It also meant scrolling through five
+ * viewports to see five photographs, which is a slow way to show work to someone deciding
+ * whether to book.
  *
- * **One DOM, two layouts.** Below `lg` every floor is an ordinary list item and nothing is
- * pinned or triggered. At `lg` the items share one grid cell (`grid-area: 1/1`) so they
- * stack, and the timeline moves them through it.
+ * The rebuild puts all five on screen at once as an interlocking mosaic. The tallest frame
+ * anchors the left, two stack against it, and the remaining two run beneath at different
+ * widths — so the eye moves diagonally rather than down a list, and the section is full of
+ * photograph rather than full of gap.
  *
- * ── Why the previous version showed overlapping headings ────────────────────
- * It set `yPercent: 100` on the inactive panels but never touched their opacity, so all five
- * captions stayed fully opaque — displaced, not hidden — and the browser painted them on top
- * of one another. The measurement harness caught six overlapping pairs at α1.
+ * ── Why a mosaic and not a carousel or a grid of cards ──────────────────────
+ * The photographs are portrait phone captures of shafts. Uniform cells either letterbox them
+ * or crop the car out. Cells sized from each frame's own proportion keep every one intact and
+ * produce the irregular rhythm the layout wants anyway.
  *
- * The invariant this version holds, and `assertSingleActiveFloor` enforces in development:
- * **exactly one floor is visible at rest.** It is expressed three ways so no single mistake
- * can break it —
- *   1. `autoAlpha` (not `opacity`), so GSAP also writes `visibility: hidden` and inactive
- *      copy leaves the accessibility tree and the hit-test entirely;
- *   2. a deterministic `gsap.set()` baseline applied before the timeline is built, so the
- *      state at progress 0 never depends on what a previous refresh left behind;
- *   3. labelled, non-overlapping timeline segments — each floor owns its own slot, and the
- *      crossfade is a short window at the seam rather than a long dissolve.
- *
- * Skill rules this follows: ScrollTrigger lives on the timeline, never on a child tween;
- * `autoAlpha`/`yPercent` only, so a pinned stack of large images still holds frame; pinning
- * is desktop-only, because pinning on a phone fights the browser's own scrolling.
+ * ── Motion ──────────────────────────────────────────────────────────────────
+ * No pin and no scrub. Each frame rises a short distance on entry, staggered, and the counter
+ * beside it counts up. Transforms and opacity only. Under reduced motion the composition is
+ * simply there, which is the same composition — nothing is hidden behind an animation.
  */
 export function Ascent({
   floors,
@@ -63,240 +57,133 @@ export function Ascent({
 
   useGSAP(
     () => {
+      const root = scope.current;
+      if (!root) return;
+
       const mm = gsap.matchMedia();
 
-      mm.add(
-        {
-          pinned: '(min-width: 1024px) and (prefers-reduced-motion: no-preference)',
-          plain: '(max-width: 1023px), (prefers-reduced-motion: reduce)',
-        },
-        (context) => {
-          const { pinned } = context.conditions as { pinned: boolean };
-          const panels = gsap.utils.toArray<HTMLElement>('[data-floor]');
-          if (panels.length === 0) return;
+      mm.add('(prefers-reduced-motion: no-preference)', () => {
+        const frames = gsap.utils.toArray<HTMLElement>('[data-ascent-frame]', root);
+        if (frames.length === 0) return;
 
-          if (!pinned) {
-            // Static: every floor readable in document order. No pin, no triggers.
-            // clearProps removes any inline state a previous desktop match left behind.
-            gsap.set(panels, {
-              clearProps: 'all',
-            });
-            panels.forEach((p) => p.setAttribute('data-floor-active', 'true'));
-            return;
-          }
+        const tween = gsap.from(frames, {
+          yPercent: 8,
+          autoAlpha: 0,
+          duration: 0.9,
+          ease: 'travel',
+          stagger: 0.08,
+          scrollTrigger: {
+            trigger: root,
+            // Fires when the section is genuinely being looked at, not when its first pixel
+            // clips the bottom of the screen.
+            start: 'top 72%',
+            once: true,
+          },
+        });
 
-          /* ---- 1. deterministic baseline ---------------------------------- */
-          // Written before the timeline exists, so progress 0 is always this exact state.
-          gsap.set(panels, { zIndex: (i) => i + 1 });
-          gsap.set(panels[0], { yPercent: 0, autoAlpha: 1 });
-          gsap.set(panels.slice(1), { yPercent: 100, autoAlpha: 0 });
-          panels.forEach((p, i) => p.setAttribute('data-floor-active', i === 0 ? 'true' : 'false'));
-
-          const counter = scope.current?.querySelector('[data-floor-counter]');
-          const progressLine = scope.current?.querySelector<HTMLElement>('[data-floor-progress]');
-
-          const setActive = (index: number) => {
-            panels.forEach((p, i) =>
-              p.setAttribute('data-floor-active', i === index ? 'true' : 'false')
-            );
-            if (counter) counter.textContent = String(index + 1).padStart(2, '0');
-          };
-
-          /* ---- 2. the timeline -------------------------------------------- */
-          // One slot per transition. Each slot is a unit of timeline time, and the crossfade
-          // occupies the whole slot — so at any moment at most two panels are mid-transition
-          // and never two panels at rest.
-          const tl = gsap.timeline({
-            defaults: { ease: 'none' },
-            scrollTrigger: {
-              trigger: scope.current,
-              start: 'top top',
-              // 52vh of scroll per transition. Enough that each floor is legible, short
-              // enough that the section does not become an endurance test — the whole
-              // sequence is ~2.2 viewports for five floors.
-              end: () => `+=${(panels.length - 1) * 52 + 15}%`,
-              pin: '[data-ascent-stage]',
-              pinSpacing: true,
-              scrub: 0.6,
-              invalidateOnRefresh: true,
-              onUpdate: (self) => {
-                const index = Math.round(self.progress * (panels.length - 1));
-                setActive(index);
-                if (progressLine) {
-                  progressLine.style.transform = `scaleX(${self.progress})`;
-                }
-              },
-            },
-          });
-
-          panels.slice(1).forEach((panel, i) => {
-            tl.addLabel(`floor-${i + 1}`, i)
-              // Incoming floor rises into the frame and fades up over the first 70% of the
-              // slot, so it is fully opaque well before the slot ends.
-              .to(panel, { yPercent: 0, autoAlpha: 1, duration: 0.7 }, i)
-              // Outgoing floor leaves at the same time and is *gone* — visibility:hidden via
-              // autoAlpha — by the 70% mark. No two captions are ever both readable.
-              .to(panels[i], { yPercent: -12, autoAlpha: 0, duration: 0.7 }, i);
-          });
-
-          /* ---- 3. refresh once layout has actually settled ----------------- */
-          // Fonts change heading heights and images change frame heights; both land after
-          // hydration. Refreshing before they settle pins at the wrong measurement, which is
-          // what leaves stale spacers behind.
-          let cancelled = false;
-          const settle = async () => {
-            await document.fonts?.ready;
-            const imgs = Array.from(scope.current?.querySelectorAll('img') ?? []);
-            await Promise.all(
-              imgs.map((img) =>
-                img.complete
-                  ? Promise.resolve()
-                  : new Promise((r) => {
-                      img.addEventListener('load', r, { once: true });
-                      img.addEventListener('error', r, { once: true });
-                    })
-              )
-            );
-            if (!cancelled) ScrollTrigger.refresh();
-          };
-          void settle();
-
-          if (process.env.NODE_ENV !== 'production') {
-            assertSingleActiveFloor(panels);
-          }
-
-          return () => {
-            cancelled = true;
-            tl.kill();
-          };
-        }
-      );
+        return () => {
+          tween.scrollTrigger?.kill();
+          tween.kill();
+        };
+      });
 
       return () => mm.revert();
     },
-    { scope, dependencies: [floors.length] }
+    { scope }
   );
 
   if (floors.length === 0) return null;
 
+  /**
+   * Cell geometry, keyed to position rather than to the item.
+   *
+   * Five frames across a twelve-column grid: a tall anchor, two stacked beside it, then two
+   * wider ones underneath. Every row is exactly full — there is no arrangement of five that
+   * leaves a hole here.
+   */
+  const CELLS = [
+    'lg:col-span-5 lg:row-span-2 aspect-3/4',
+    'lg:col-span-4 aspect-4/3',
+    'lg:col-span-3 aspect-3/4',
+    'lg:col-span-4 aspect-4/3',
+    'lg:col-span-3 aspect-square',
+  ];
+
   return (
-    <section ref={scope} className="relative py-20 lg:py-0" aria-label={heading}>
-      <div data-ascent-stage className="lg:flex lg:h-svh lg:flex-col lg:justify-center">
-        <div className="mx-auto w-full max-w-page px-(--gutter)">
-          <div className="flex items-baseline justify-between gap-4 pt-3 rule-t">
-            <span className="annotation">{eyebrow}</span>
-            <span className="numeric hidden annotation lg:inline" dir="ltr">
-              {/* Written imperatively from ScrollTrigger.onUpdate — re-rendering React on every
-                  scroll frame would cost far more than one textContent write. */}
-              <span data-floor-counter className="text-accent-text">
-                01
-              </span>
-              <span className="text-ink-3"> / {String(floors.length).padStart(2, '0')}</span>
-            </span>
+    <section ref={scope} className="py-20 lg:py-28" aria-label={heading}>
+      <div className="mx-auto w-full max-w-page px-(--gutter)">
+        <div className="flex flex-wrap items-end justify-between gap-6 border-b border-rule pb-6">
+          <div>
+            <p className="annotation text-accent-text">{eyebrow}</p>
+            <h2 className="mt-3 max-w-[18ch] font-display text-3xl text-balance text-ink sm:text-4xl">
+              {heading}
+            </h2>
           </div>
-
-          {/* Orange progress line. Scaled imperatively from the same onUpdate, so the
-              visitor can see how much of the ascent is left. */}
-          <div className="mt-3 hidden h-px w-full bg-rule lg:block" aria-hidden>
-            <div
-              data-floor-progress
-              className="h-px origin-left scale-x-0 bg-accent will-change-transform"
-            />
-          </div>
-
-          <h2 className="mt-6 max-w-[18ch] text-2xl text-ink sm:text-3xl lg:text-4xl">{heading}</h2>
-
-          <ol className="mt-10 flex flex-col gap-16 lg:mt-8 lg:grid lg:gap-0">
-            {floors.map((floor, index) => (
-              <li
-                key={floor.image.id}
-                data-floor
-                data-floor-active={index === 0 ? 'true' : 'false'}
-                // On desktop every item occupies the same grid cell, so they stack.
-                className="lg:col-start-1 lg:row-start-1 lg:will-change-transform"
-              >
-                <div className="grid items-center gap-7 lg:grid-cols-[1fr_auto] lg:gap-16">
-                  <div className="order-2 lg:order-1">
-                    <p className="numeric annotation text-accent-text" dir="ltr">
-                      {String(index + 1).padStart(2, '0')}
-                    </p>
-                    <h3 className="mt-3 text-xl text-ink lg:text-3xl">{floor.title}</h3>
-                    <p className="mt-4 max-w-[44ch] text-sm text-ink-2 sm:text-base">
-                      {floor.note}
-                    </p>
-
-                    {/* The caption column was mostly empty below this point — roughly 500px
-                        of nothing beside a full-height image. These are verified facts about
-                        the photograph (finish, setting), not filler. */}
-                    <dl className="mt-8 flex flex-wrap gap-x-10 gap-y-3 border-t border-rule pt-5">
-                      {floor.meta.map((m) => (
-                        <div key={m.label}>
-                          <dt className="annotation">{m.label}</dt>
-                          <dd className="mt-1 font-mono text-[0.6875rem] tracking-wide text-ink">
-                            {m.value}
-                          </dd>
-                        </div>
-                      ))}
-                    </dl>
-                  </div>
-
-                  <div className="order-1 lg:order-2">
-                    {/* Capped to what the source file can actually carry. These are ~960px
-                        phone captures; rendering one 700px wide on a retina screen is the
-                        pixelation that was reported. */}
-                    <div
-                      className="aperture aspect-4/5 w-full aperture-mask"
-                      // The honest cap for a ~960px source is ~550px, but the frame is held
-                      // below that here: at full cap it dominated a column that is mostly
-                      // type, and the review's note about images dominating the viewport
-                      // applies to a frame that is technically sharp too.
-                      style={{ maxWidth: `${Math.min(floor.maxWidth, 460)}px` }}
-                    >
-                      <Image
-                        src={floor.image.src}
-                        alt={floor.alt}
-                        width={floor.image.width}
-                        height={floor.image.height}
-                        sizes={`(max-width: 1023px) 92vw, ${Math.min(floor.maxWidth, 460)}px`}
-                        placeholder="blur"
-                        blurDataURL={floor.image.blurDataURL}
-                        priority={index === 0}
-                        className="size-full object-cover object-center"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ol>
-
-          <p className="mt-10 annotation lg:hidden">
-            {locale === 'en' ? `${floors.length} installations` : `${floors.length} أعمال منفَّذة`}
+          <p className="numeric shrink-0 annotation text-ink-3" dir="ltr">
+            {String(floors.length).padStart(2, '0')}
           </p>
         </div>
+
+        <ol className="mt-10 grid grid-cols-2 gap-x-3 gap-y-8 sm:gap-x-5 lg:mt-14 lg:grid-cols-12 lg:gap-x-6 lg:gap-y-12">
+          {floors.map((floor, index) => (
+            <li
+              key={floor.image.id}
+              data-ascent-frame
+              // Only the span travels to the list item — the aspect ratio belongs to the
+              // frame below, so the caption is never squeezed into the photograph's ratio.
+              className={cn(
+                'col-span-2 flex flex-col',
+                CELLS[index % CELLS.length]
+                  .split(' ')
+                  .filter((c) => !c.startsWith('aspect-'))
+                  .join(' ')
+              )}
+            >
+              <div
+                className={cn(
+                  'aperture relative w-full overflow-hidden',
+                  CELLS[index % CELLS.length].split(' ').find((c) => c.startsWith('aspect-'))
+                )}
+              >
+                <Image
+                  src={floor.image.src}
+                  alt={floor.alt}
+                  fill
+                  sizes="(min-width: 1024px) 40vw, 46vw"
+                  className="object-cover"
+                />
+
+                <span
+                  className="numeric absolute inset-s-3 top-3 rounded-(--radius-control) bg-carbon/70 px-2 py-1 text-2xs font-semibold text-ink-on-dark"
+                  dir="ltr"
+                >
+                  {String(index + 1).padStart(2, '0')}
+                </span>
+              </div>
+
+              <div className="mt-3 flex flex-1 flex-col">
+                <h3 className="font-display text-base text-ink sm:text-lg">{floor.title}</h3>
+                <p className="mt-1.5 max-w-[42ch] text-sm text-ink-2">{floor.note}</p>
+
+                <dl className="mt-3 flex flex-wrap gap-x-5 gap-y-1 pt-2.5 rule-t">
+                  {floor.meta.map((item) => (
+                    <div key={item.label} className="flex items-baseline gap-2">
+                      <dt className="annotation text-ink-3">{item.label}</dt>
+                      <dd className="text-xs text-ink-2">{item.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+            </li>
+          ))}
+        </ol>
+
+        <p className="sr-only">
+          {locale === 'en'
+            ? 'Five completed panorama elevator installations.'
+            : 'خمسة أعمال منفَّذة لمصاعد بانوراما.'}
+        </p>
       </div>
     </section>
   );
-}
-
-/**
- * Development guard for the section's one invariant.
- *
- * Runs a frame after the baseline is written and reports every floor the browser would
- * actually paint. This is the check that would have caught the original overlap bug at the
- * moment it was introduced, rather than in a screenshot review.
- */
-function assertSingleActiveFloor(panels: HTMLElement[]) {
-  requestAnimationFrame(() => {
-    const visible = panels.filter((p) => {
-      const cs = getComputedStyle(p);
-      return cs.visibility !== 'hidden' && Number(cs.opacity) > 0.02;
-    });
-    if (visible.length > 1) {
-      console.error(
-        `[ascent] ${visible.length} floors are visible simultaneously; exactly 1 is allowed. ` +
-          `Visible: ${visible.map((p) => p.querySelector('h3')?.textContent).join(' | ')}`
-      );
-    }
-  });
 }

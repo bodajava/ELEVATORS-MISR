@@ -147,12 +147,32 @@ function outputName(record) {
  *  - people-consent        : permitted as supporting social proof, but only where an elevator
  *    is actually present; people-only frames add no project context.
  */
+/**
+ * Roles whose assets may be built.
+ *
+ * This is a *destination* whitelist, not a rights gate — `isShippable` applies the rights
+ * rules separately and they are unchanged. The distinction matters because it was the cause
+ * of a real defect: six **rights-clear** videos were being withheld from the site purely
+ * because their role was `optional`, `hero-video-primary` or `hero-video-alt`, none of which
+ * appeared here. The site rendered two videos out of sixteen originals and looked as though
+ * the pipeline were broken; nothing was broken, the material simply had no destination.
+ *
+ * `optional` in the inventory means "usable, no destination assigned yet". Those destinations
+ * now exist — the product-film section and the project pages — so the role is shippable.
+ *
+ * `hero-video-primary` and `hero-video-alt` are the clips that were candidates for the hero
+ * before the current one was chosen. They are rights-clear, high-resolution and otherwise
+ * unused, so they carry the product-film section rather than sitting on disk.
+ */
 const SHIPPABLE_ROLES = new Set([
   'hero-still',
   'gallery',
   'process',
   'social-proof',
   'detail-video',
+  'optional',
+  'hero-video-primary',
+  'hero-video-alt',
 ]);
 
 /**

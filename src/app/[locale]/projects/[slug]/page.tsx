@@ -2,19 +2,17 @@ import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 
-import { Aperture } from '@/components/media/aperture';
-import { AmbientVideo } from '@/components/media/ambient-video';
-import { ProjectImage } from '@/components/media/project-image';
-import { Reveal } from '@/components/motion/reveal';
-import { ProjectCard } from '@/components/projects/project-card';
+import { ProjectMatrix } from '@/components/projects/project-matrix';
+import { ProjectStory } from '@/components/projects/project-story';
 import { InspectionCta } from '@/components/sections/inspection-cta';
 import { Breadcrumbs } from '@/components/ui/breadcrumbs';
 import { Container } from '@/components/ui/container';
 import { JsonLd } from '@/components/seo/json-ld';
 import { projectsPage } from '@/content/pages';
-import { finishLabels, getProject, projects } from '@/content/projects';
+import { finishLabels, getProject, projects, settingLabels } from '@/content/projects';
 import { isLocale, locales, type Locale } from '@/i18n/config';
-import { imageSizes, imagesFor, maxImageWidth, maxVideoWidth, videosFor } from '@/lib/media';
+import { Link } from '@/i18n/navigation';
+import { imagesFor, videosFor } from '@/lib/media';
 import { buildAlternates } from '@/lib/seo/metadata';
 import { breadcrumbSchema, imageObjectSchema } from '@/lib/seo/schema';
 
@@ -71,7 +69,7 @@ export default async function ProjectDetailPage({
 
   const images = imagesFor(slug);
   const videos = videosFor(slug);
-  const [lead, ...rest] = images;
+  const [lead] = images;
 
   const related = projects
     .filter((p) => p.slug !== slug && p.finish === project.finish)
@@ -101,97 +99,89 @@ export default async function ProjectDetailPage({
       </Container>
 
       <article>
+        {/* ── Identity ────────────────────────────────────────────────────────
+            Full width, not squeezed beside the lead photograph. The old layout put the
+            copy in a 1fr column next to a portrait still, which left most of the viewport
+            empty on projects with short bodies. */}
         <Container width="wide">
-          <div className="grid gap-12 lg:grid-cols-[1fr_0.9fr] lg:items-start lg:gap-16">
-            <div className="lg:pt-6">
-              <p className="annotation">{finishLabels[project.finish][l]}</p>
-              <h1 className="mt-4 font-display text-4xl text-balance text-ink sm:text-5xl">
-                {project.title[l]}
-              </h1>
-              <div className="mt-8 flex flex-col gap-5">
-                {project.body[l].map((paragraph) => (
-                  <p key={paragraph} className="max-w-[54ch] text-base text-pretty text-ink-2">
-                    {paragraph}
-                  </p>
-                ))}
-              </div>
+          <p className="annotation text-accent-text">{finishLabels[project.finish][l]}</p>
+          <h1 className="mt-4 max-w-[16ch] font-display text-4xl text-balance text-ink sm:text-5xl lg:text-6xl">
+            {project.title[l]}
+          </h1>
+
+          <div className="mt-10 grid gap-10 border-t border-rule pt-8 lg:grid-cols-[1.15fr_0.85fr] lg:gap-16">
+            <div className="flex flex-col gap-5">
+              {project.body[l].map((paragraph) => (
+                <p key={paragraph} className="max-w-[58ch] text-base text-pretty text-ink-2">
+                  {paragraph}
+                </p>
+              ))}
             </div>
 
-            {/* The lead frame is capped at what this file can actually resolve. These are
-                ~960px phone captures; drawing one at 700px on a retina screen is the
-                pixelation the review reported. */}
-            {lead ? (
-              <div style={{ maxWidth: `${maxImageWidth(lead)}px` }} className="w-full">
-                <Aperture ratio="3/4" framed>
-                  <ProjectImage
-                    image={lead}
-                    alt={project.alt[l]}
-                    sizes={`(max-width: 1023px) 92vw, ${maxImageWidth(lead)}px`}
-                    priority
-                  />
-                </Aperture>
-              </div>
-            ) : null}
+            {/* Verified metadata only. Every value here comes from the project record or is
+                counted from the media that actually shipped — nothing is inferred, and
+                there is no client, date, location or specification. */}
+            <dl className="grid grid-cols-2 gap-x-8 gap-y-6 self-start">
+              {[
+                { k: l === 'en' ? 'Finish' : 'التشطيب', v: finishLabels[project.finish][l] },
+                { k: l === 'en' ? 'Setting' : 'الموقع', v: settingLabels[project.setting][l] },
+                {
+                  k: l === 'en' ? 'Frames' : 'الصور',
+                  v: String(images.length).padStart(2, '0'),
+                },
+                {
+                  k: l === 'en' ? 'Film' : 'فيلم',
+                  v: videos.length > 0 ? String(videos.length).padStart(2, '0') : '—',
+                },
+              ].map((row) => (
+                <div key={row.k} className="border-t border-rule pt-3">
+                  <dt className="annotation text-ink-3">{row.k}</dt>
+                  <dd className="mt-1.5 font-body text-base text-ink">{row.v}</dd>
+                </div>
+              ))}
+            </dl>
           </div>
         </Container>
 
-        {/* Remaining stills — the secondary angles. Deliberately smaller than the lead: they
-            are supporting frames, and several are the weaker captures of their set. */}
-        {rest.length > 0 ? (
-          <Container width="wide" className="mt-16">
-            <ul className="grid gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
-              {rest.map((image, index) => (
-                <Reveal as="li" key={image.id} delay={0.05 * (index % 3)}>
-                  <Aperture ratio="3/4">
-                    <ProjectImage image={image} alt={project.alt[l]} sizes={imageSizes.card} />
-                  </Aperture>
-                </Reveal>
-              ))}
-            </ul>
-          </Container>
-        ) : null}
-
-        {videos.length > 0 ? (
-          <Container width="wide" className="mt-16">
-            <ul className="grid gap-8 sm:grid-cols-2 lg:max-w-3xl">
-              {videos.map((video) => (
-                <Reveal as="li" key={video.id}>
-                  {/* Capped to the clip's own resolution — these are 624x832 and 960x540
-                      captures, so the frame is a card, not a panel. */}
-                  <div
-                    className={`aperture relative w-full aperture-mask bg-aperture ${
-                      video.orientation === 'portrait' ? 'aspect-3/4' : 'aspect-video'
-                    }`}
-                    style={{ maxWidth: `${maxVideoWidth(video)}px` }}
-                  >
-                    <AmbientVideo video={video} label={project.title[l]} />
-                  </div>
-                </Reveal>
-              ))}
-            </ul>
-          </Container>
-        ) : null}
+        {/* ── The media story ─────────────────────────────────────────────────
+            Every still and film belonging to this project, composed into complete rows.
+            See ProjectStory: a lone portrait is never left beside an empty column. */}
+        <Container width="wide" className="mt-14 lg:mt-20">
+          <ProjectStory
+            images={images}
+            videos={videos}
+            alt={project.alt[l]}
+            label={project.title[l]}
+            locale={l}
+          />
+        </Container>
       </article>
 
       {related.length > 0 ? (
-        <Container width="wide" className="mt-20">
-          <h2 className="border-b border-rule pb-5 font-display text-2xl text-ink">
-            {finishLabels[project.finish][l]}
-          </h2>
-          <div className="mt-12 grid gap-x-8 gap-y-16 sm:grid-cols-2 lg:grid-cols-3">
-            {related.map((item, index) => (
-              <Reveal key={item.slug} delay={0.05 * index}>
-                <ProjectCard project={item} locale={l} />
-              </Reveal>
-            ))}
+        <Container width="wide" className="mt-24 lg:mt-32">
+          <div className="flex items-baseline justify-between gap-6 border-b border-rule pb-5">
+            <h2 className="font-display text-2xl text-ink sm:text-3xl">
+              {l === 'en' ? 'More in this finish' : 'أعمال أخرى بالتشطيب نفسه'}
+            </h2>
+            <p className="numeric shrink-0 annotation" dir="ltr">
+              {String(related.length).padStart(2, '0')}
+            </p>
           </div>
+
+          {/* The same planner as the index, so the related row is balanced and can never
+              strand a single project on its own line. The current project is excluded
+              upstream, so it can never appear as related to itself. */}
+          <div className="mt-12">
+            <ProjectMatrix items={related} locale={l} />
+          </div>
+
           <p className="mt-10">
-            <a
-              href={`/${l}/projects`}
+            <Link
+              href="/projects"
               className="text-sm text-ink-2 underline underline-offset-4 transition-colors hover:text-ink"
             >
               {tCta('viewAllProjects')}
-            </a>
+            </Link>
           </p>
         </Container>
       ) : null}

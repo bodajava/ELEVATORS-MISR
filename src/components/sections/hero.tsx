@@ -31,11 +31,23 @@ import type { HeroAsset } from '@/lib/media';
  * wrapper is **not** clipped — a parent `overflow: hidden` here would cut the video off as it
  * grows past the type.
  *
+ * ── The opening ─────────────────────────────────────────────────────────────
+ * The composition is **complete at paint**. Both words, the eyebrow, the headline and both
+ * calls to action are on screen and legible before a single pixel is scrolled — there is no
+ * reveal to sit through and no empty cream screen. An earlier revision slid the type up from
+ * `yPercent: 108` and faded the film in from zero; a visitor arriving at the page saw nothing
+ * they could read. The scroll sequence now *changes* a finished composition rather than
+ * assembling one.
+ *
  * ── The scroll ──────────────────────────────────────────────────────────────
- * One timeline, scrubbed. The video starts small and tilted between the words, then travels
- * down, scales up continuously and rotates level, finishing as a wide landscape frame below
- * the heading with cream margins either side. The two words drift apart and recede so the
- * video is leaving a composition rather than covering one.
+ * One timeline, scrubbed. The video starts tilted between the words, then travels down, scales
+ * up continuously and rotates level, finishing as a wide anamorphic frame with cream margins
+ * either side. The two words drift apart and recede — to 0.42, still legible, because they are
+ * the page's headline and not a transition effect.
+ *
+ * The descent is deliberately larger than half the growth. Below that the frame's top edge
+ * stays put while only its bottom extends, and the motion reads as "expanding downward"
+ * rather than "travelling down".
  *
  * ── Why scale, not width ────────────────────────────────────────────────────
  * The element carries its **final** width in CSS; the opening size is a `scale` under 1.
@@ -43,9 +55,8 @@ import type { HeroAsset } from '@/lib/media';
  * transform-only, and the settled frame is exactly the specified
  * `clamp(760px, 78vw, 1240px)` with no arithmetic drift.
  *
- * `borderRadius` is counter-animated because a scaled box scales its corners too: 64px at the
- * opening scale renders as ~28px, and 34px at rest renders as 34px. So the *visible* radius
- * moves 28→34 across the sequence while staying inside spec at both ends.
+ * `borderRadius` is counter-animated because a scaled box scales its corners too, so the
+ * *visible* radius stays near `--radius-card` at both ends of the sequence.
  *
  * ── Reduced motion ──────────────────────────────────────────────────────────
  * No pin, no ScrollTrigger, no scrub. The final composition is set immediately: video level
@@ -79,14 +90,38 @@ export function Hero({ locale, heroAsset }: { locale: Locale; heroAsset: HeroAss
 
       if (!film || !stage || words.length !== 2) return;
 
-      /** Opening width from the spec: clamp(300px, 34vw, 570px) desktop. */
-      const openingWidth = () => Math.min(570, Math.max(300, window.innerWidth * 0.34));
+      /**
+       * Centring lives in GSAP, not in Tailwind.
+       *
+       * GSAP takes ownership of an element's transform and writes `translate: none`, which
+       * silently destroyed the `-translate-x-1/2 -translate-y-1/2` utilities this element used
+       * to carry. In the animated path that went unnoticed, because GSAP folds the computed
+       * translate into its own matrix on first write. Under `prefers-reduced-motion` it did
+       * not: `gsap.set(..., { y: 0 })` produced an identity matrix, the film sat at `left: 50%`
+       * with no correction, and the page gained 173px of horizontal overflow.
+       *
+       * Owning both axes here means the two paths cannot disagree.
+       */
+      const CENTRE = { xPercent: -50, yPercent: -50 } as const;
+
+      /** Opening width — large enough to read as the subject, not a thumbnail. */
+      const openingWidth = () => gsap.utils.clamp(340, 620, window.innerWidth * 0.4);
+
+      /** Resting corner radius. `--radius-card`, the architecture scale for editorial media. */
+      const RADIUS = 24;
 
       const mm = gsap.matchMedia();
 
       /* ---------- reduced motion: the settled frame, immediately ---------- */
       mm.add('(prefers-reduced-motion: reduce)', () => {
-        gsap.set(film, { scale: 1, rotate: 0, y: 0, borderRadius: 34, autoAlpha: 1 });
+        gsap.set(film, {
+          ...CENTRE,
+          scale: 1,
+          rotate: 0,
+          y: 0,
+          borderRadius: RADIUS,
+          autoAlpha: 1,
+        });
         gsap.set(words, { yPercent: 0, autoAlpha: 1 });
         if (copy) gsap.set(copy, { autoAlpha: 1, y: 0 });
         if (eyebrow) gsap.set(eyebrow, { autoAlpha: 1 });
@@ -104,37 +139,44 @@ export function Hero({ locale, heroAsset }: { locale: Locale; heroAsset: HeroAss
           // freezing the ratio measured at first paint.
           const startScale = () => {
             const finalW = film.offsetWidth || 1;
-            const openW = desktop ? openingWidth() : Math.min(window.innerWidth * 0.6, 240);
+            const openW = desktop ? openingWidth() : Math.min(window.innerWidth * 0.66, 280);
+            // finalW is now the full page width, so the opening scale is derived from it
+            // rather than from a clamp — the frame still opens at ~40vw between the lines.
             return gsap.utils.clamp(0.2, 1, openW / finalW);
           };
 
-          // The film enters high — tucked up behind "EGYPT" — and settles slightly below the
-          // optical centre. Measured, not guessed: the settled frame has to clear the bottom
-          // band (headline, CTAs, spec rail), which an earlier pass overlapped by ~160px.
-          const fromY = () => -window.innerHeight * (desktop ? 0.055 : 0.06);
-          // Mobile settles a touch above centre: the bottom band is taller there (the two CTAs
-          // stack), so a positive offset put the frame 17px into the headline — measured.
-          const toY = () => window.innerHeight * (desktop ? 0.035 : -0.01);
+          // The film enters high — tucked up between the two words — and descends as it grows.
+          // The resting position is measured against the bottom band (headline, CTAs, spec
+          // rail), which must never be overlapped: an earlier pass ran 160px into it.
+          // The film travels a long way down the viewport as it grows, and the type leaves
+          // upward past it. That is the reference behaviour: the frame comes *with* the
+          // visitor rather than settling into a slot near where it started.
+          //
+          // The descent must also exceed half the growth, or the frame's top edge stays put
+          // and the motion reads as "expanding downward" rather than "travelling down".
+          const fromY = () => -window.innerHeight * (desktop ? 0.15 : 0.09);
+          const toY = () => window.innerHeight * (desktop ? 0.145 : 0.1);
 
-          /* ---- deterministic baseline ------------------------------------ */
+          /* ---- the opening composition, fully visible ---------------------
+             Everything a visitor needs in order to understand the page is on screen at
+             paint: both words, the eyebrow, the headline and both calls to action. There is
+             no reveal to wait through and no empty cream screen — the sequence below changes
+             an already-complete composition rather than assembling one. */
           gsap.set(film, {
+            ...CENTRE,
             scale: startScale,
             rotate: desktop ? -6 : -4,
             y: fromY,
-            // 64 × the opening scale renders as ~28px, inside the 24–32px spec.
-            borderRadius: () => 34 / startScale(),
+            // Counter-scaled so the *visible* radius stays close to RADIUS at both ends
+            // instead of being multiplied by the opening scale.
+            borderRadius: () => RADIUS / startScale(),
             autoAlpha: 1,
             transformOrigin: 'center center',
             force3D: true,
           });
           gsap.set(words, { yPercent: 0, autoAlpha: 1 });
-          if (copy) gsap.set(copy, { autoAlpha: 0, y: 20 });
-
-          /* ---- entrance (plays once, not scroll-linked) ------------------ */
-          const intro = gsap.timeline({ defaults: { ease: 'travel' } });
-          intro.from(words, { yPercent: 108, duration: 1.05, stagger: 0.09 });
-          if (eyebrow) intro.from(eyebrow, { autoAlpha: 0, y: 12, duration: 0.7 }, 0.45);
-          intro.from(film, { autoAlpha: 0, duration: 0.6 }, 0.35);
+          if (copy) gsap.set(copy, { autoAlpha: 1, y: 0 });
+          if (eyebrow) gsap.set(eyebrow, { autoAlpha: 1 });
 
           /* ---- the scrubbed sequence ------------------------------------- */
           const travel = desktop ? 190 : 150;
@@ -164,30 +206,42 @@ export function Hero({ locale, heroAsset }: { locale: Locale; heroAsset: HeroAss
               // vh rather than px so the descent scales with the viewport.
               y: toY,
               scale: 1,
+              // It settles square. The lean belongs to the *journey* — the frame is tilted
+              // while it is travelling and lands level, the way something set down comes to
+              // rest flat.
               rotate: 0,
-              borderRadius: 34,
+              borderRadius: RADIUS,
               duration: 1,
             },
             0
           );
 
-          // The type opens out of the way — subtle, and only enough that the video is
-          // clearly leaving the composition rather than sitting on top of it.
-          tl.to(wordTop, { yPercent: -46, autoAlpha: 0.14, duration: 1 }, 0).to(
+          // The type leaves upward as the film comes down past it. Both words travel, the
+          // top one further and sooner, so they part around the frame before clearing the
+          // stage entirely — the film is moving *through* the headline, not covering it.
+          //
+          // They stay fully opaque while they are still on screen: this is the page's
+          // headline leaving, not a fade-out effect.
+          tl.to(wordTop, { yPercent: -190, duration: 1 }, 0).to(
             wordBottom,
-            { yPercent: 34, autoAlpha: 0.14, duration: 1 },
-            0
+            { yPercent: -120, duration: 1 },
+            0.06
           );
 
-          // The statement lands only once the frame has settled.
-          if (copy) tl.to(copy, { autoAlpha: 1, y: 0, duration: 0.28 }, 0.72);
+          // The bottom band leaves with the type, and leaves *early* — it has to be gone
+          // before the descending film reaches it, or the film crosses copy that is still
+          // readable. Measured: a 0.34 fade still left it at 0.31 opacity under a 21px
+          // overlap. The header keeps a permanent inspection CTA, so the conversion path is
+          // never lost while this passage plays.
+          if (copy)
+            tl.to(copy, { y: () => -window.innerHeight * 0.28, autoAlpha: 0, duration: 0.18 }, 0);
+          if (eyebrow) tl.to(eyebrow, { autoAlpha: 0, duration: 0.4 }, 0);
 
           // A held beat so the destination of the sequence is actually looked at before the
           // section unpins.
           tl.to({}, { duration: 0.18 }, 1);
 
           return () => {
-            intro.kill();
             tl.kill();
             releaseSequence('hero');
           };
@@ -244,11 +298,16 @@ export function Hero({ locale, heroAsset }: { locale: Locale; heroAsset: HeroAss
           {/* The video — between the words */}
           <div
             data-hero-film
-            className="absolute top-1/2 left-1/2 z-20 w-[clamp(600px,62vw,1020px)] max-w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2 overflow-hidden will-change-transform max-lg:w-[calc(100vw-2rem)]"
-            // 2.05:1 — a cinematic band rather than a screen. It keeps the settled frame short
-            // enough to clear the bottom band, stays close to the source's own 1.83:1 so
-            // object-cover crops little, and reads as landscape, not full-bleed.
-            style={{ aspectRatio: '2.05 / 1' }}
+            // No `-translate-x-1/2 -translate-y-1/2` here: GSAP owns this element's transform
+            // and writes `translate: none`, so those utilities were being discarded. Centring
+            // is applied as `xPercent/yPercent` in the timeline instead — see CENTRE above.
+            className="absolute top-1/2 left-1/2 z-20 w-[calc(100vw-2rem)] overflow-hidden will-change-transform"
+            // 2.6:1. Wider than anamorphic, and the ratio is doing a specific job: at the
+            // full page width the frame has to stay short enough to travel a visible distance
+            // down the viewport *and* still land inside it. At 2.35 the settled frame was
+            // 599px tall at 1440x900 and the descent had nowhere to go — the motion collapsed
+            // back into "grows in place", which is the thing being corrected.
+            style={{ aspectRatio: '2.6 / 1' }}
           >
             {heroAsset ? <HeroVideo hero={heroAsset} /> : null}
           </div>

@@ -121,6 +121,34 @@ export function verticalWalkthroughs(): VideoAsset[] {
 }
 
 /**
+ * Every film the site may show, in one list.
+ *
+ * The homepage used to render `verticalWalkthroughs()` — `detail-video` **and** portrait —
+ * which resolved to two clips out of sixteen originals and read as a broken pipeline. It was
+ * not broken: the other rights-clear films simply had no destination, so the media build
+ * never generated derivatives for them. See the note on `SHIPPABLE_ROLES` in
+ * scripts/build-media.mjs.
+ *
+ * This returns all of them, ordered so the highest-resolution landscape films lead — they are
+ * the ones that survive being shown large — and the portrait phone captures follow.
+ *
+ * It is still a *rights-gated* list: anything carrying a third-party watermark, a conflicting
+ * burned-in brand name, or an identifiable person without consent never reaches the manifest
+ * in the first place.
+ */
+export function productFilms(): VideoAsset[] {
+  return [...media.videos].sort((a, b) => {
+    const landscape = (v: VideoAsset) => (v.orientation === 'landscape' ? 0 : 1);
+    return landscape(a) - landscape(b) || b.width * b.height - a.width * a.height;
+  });
+}
+
+/** Films not already tied to a specific project page. */
+export function unassignedFilms(): VideoAsset[] {
+  return productFilms().filter((v) => !v.projectSlug || v.projectSlug === 'unassigned');
+}
+
+/**
  * The `sizes` attribute for a slot.
  *
  * Source photography tops out at 1280px, so no slot should ever request more than that —
