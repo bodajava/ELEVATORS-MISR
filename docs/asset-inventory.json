@@ -1370,8 +1370,8 @@
       },
       "project_slug": "marketing",
       "role": "none",
-      "rights": "clear",
-      "notes": "360x640 - too low resolution to ship",
+      "rights": "people-consent",
+      "notes": "360x640, too low to ship AND shows the same identifiable presenter as the other marketing films. Originally recorded as rights=clear, which was wrong: the resolution note masked the consent problem. Corrected 2026-08-08 after frame extraction.",
       "shippable": false
     },
     {

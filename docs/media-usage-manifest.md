@@ -80,6 +80,18 @@ rights decisions and they hold until the company supplies written permission.
 | `CONPONENTS/1/2026-08-05 23.13.29.mp4`         | **Burned-in "Arab Egypt for elevators"**, which contradicts the site's English brand name, _and_ it shows the group-6 subject rather than group 1.                        |
 | `SHOW PRODUT video/2026-08-05 23.11.30.mp4`    | **Burned-in "Arab Egypt for elevators"** script mark.                                                                                                                     |
 
+> **What frame extraction actually showed (2026-08-08).** All four films were re-examined
+> frame by frame rather than trusted to the original notes. Every one shows an identifiable
+> person: two different presenters across the set. Three also carry a third-party or
+> conflicting brand mark on their B-roll — a "DAR" mark, a studio logo, and
+> "Arab Egypt for elevators". One burns in a "38 سنة خبرة" experience claim that no supplied
+> document supports.
+>
+> The consent rule is now enforced on the asset's **kind**, not its role: no video classified
+> `people-consent` can ship regardless of what role it is given. `tests/unit/media-rights.test.ts`
+> asserts this against the generated manifest, so a future role edit fails the suite rather
+> than publishing someone who never agreed to it.
+
 > **A conflict worth stating plainly.** The brief asks for a marketing slider containing every
 > marketing video — "if there are four videos, all four must exist in the slider". All four
 > files in `MARKTEING-video/` are blocked above: two for consent, one for a third-party

@@ -192,12 +192,34 @@ const EXCLUDED_ROLES_REASON = {
   'media-story': 'Arabic presenter advertisement — contains third-party-branded B-roll mid-film',
 };
 
+/**
+ * Video is held to a stricter rule than stills.
+ *
+ * A still of a person can be reviewed once and cleared. A film cannot: a face appears and
+ * disappears across its length, so "an elevator is present" — the test that authorises the
+ * social-proof photographs — is not a test a video can pass by inspection of one frame.
+ *
+ * This exists because of a real miss. `AQMyyB….mp4` was recorded as `rights: clear` with the
+ * note "360x640 - too low resolution to ship". The resolution was true and the classification
+ * was wrong: the film shows the same identifiable presenter as the others. Nothing shipped,
+ * but only because its role happened to be `none` — and `SHIPPABLE_ROLES` was later widened to
+ * include `optional`, so a single role edit would have published it.
+ *
+ * So consent is now enforced on the asset's kind, not on its role. No video carrying
+ * `people-consent` can ship, whatever role anyone gives it.
+ */
 function isShippable(record) {
   if (!SHIPPABLE_ROLES.has(record.role)) return false;
   if (record.rights === 'third-party-watermark') return false;
   if (record.rights === 'brand-name-conflict') return false;
-  // People and actor material is authorised, and is used where an elevator is present.
-  if (record.rights === 'people-consent') return record.role === 'social-proof';
+
+  if (record.rights === 'people-consent') {
+    // Stills: permitted as supporting social proof, where an elevator is actually present.
+    // Video: never, until written per-person publication consent is supplied.
+    if (record.kind === 'video') return false;
+    return record.role === 'social-proof';
+  }
+
   return record.rights === 'clear';
 }
 
