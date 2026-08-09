@@ -144,7 +144,7 @@ remaining credential list:
 
 Verification harnesses live in `scripts/` and are run against a dev or production server:
 `hero-check`, `form-check`, `matrix-check`, `emptiness`, `about-check`, `perf`, `index-check`,
-`marquee-check`, `grid-check`. A terminal
+`marquee-check`, `grid-check`, `ambient-check`. A terminal
 command passing is not visual completion — `emptiness.mjs` exists because the earlier
 band-based dead-space check reported clean pages that were visibly empty.
 

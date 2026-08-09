@@ -344,6 +344,23 @@ One shared system for the whole site, not per-section animations.
   everywhere; the background yields.
 - Fixed behind content, `pointer-events: none`, and it never causes layout shift.
 
+**The pointer light is theme-dependent, not one effect with one colour.** On the dark ground
+it is additive warm light — the version the client approved. On linen the same colours are
+light over light and the measured change was almost nothing, so the light theme uses a warm
+_shading_ instead. Both come from `--ambient-glow` / `--ambient-glow-opacity`, and the four
+drifting forms are `--ambient-1..4` for the same reason.
+
+There is a hard ceiling on how strong the light-theme version can be, and it is contrast, not
+taste: the field sits behind everything, so annotation text passes under it. A terracotta wash
+lowers the ground's luminance, and `--ink-3` only has 5.13:1 to spend. Measured under the lamp
+it is **4.81:1** — passing, with little room left. A stronger tint in that hue drops it below
+AA, which is why the light theme uses a _lighter_ warm (`#E5B98F` at a higher alpha) rather
+than more of the accent: it shifts more colour per unit of luminance lost.
+
+`scripts/ambient-check.mjs` asserts both halves — that moving the pointer changes the page
+well beyond the background's own drift, and that annotation text still clears AA against the
+ground as actually rendered under the light.
+
 ### Cursor (desktop, fine pointer only)
 
 - One small precise point plus one larger soft ring that follows with eased lag.

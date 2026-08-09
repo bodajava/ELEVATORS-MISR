@@ -249,6 +249,36 @@
   --focus: #3d3929;
   --danger: #b3392f;
   --success: #4a6b45;
+
+  /* --- Ambient field -------------------------------------------------------
+     The pointer light and the four drifting forms, as tokens rather than as
+     colours baked into the component. They were fixed values from the old
+     "Signal" palette — a warm, *lighter* glow. On a dark ground that reads as
+     light falling on brass, which is why the effect works there. On this linen
+     ground it is light over light, and the measured delta was almost nothing:
+     the lamp effectively did not exist in the light theme.
+
+     So the light theme's version is not a glow at all. It is a soft warm
+     *shading* — the page dims very slightly where the pointer is not, and the
+     terracotta lifts where it is. Same gesture, inverted for the ground, which
+     is the only way a light-follow effect is visible on paper. */
+  --ambient-glow: radial-gradient(
+    circle at 50% 50%,
+    color-mix(in oklab, #e5b98f 34%, transparent) 0%,
+    color-mix(in oklab, #d9a066 18%, transparent) 42%,
+    transparent 72%
+  );
+  --ambient-glow-opacity: 0.44;
+
+  /* The drifting forms. Brass, smoked glass, warm paper, terracotta. */
+  --ambient-1: #c9a227;
+  --ambient-1-opacity: 0.13;
+  --ambient-2: #8fa3ad;
+  --ambient-2-opacity: 0.12;
+  --ambient-3: #d8d1c0;
+  --ambient-3-opacity: 0.55;
+  --ambient-4: #c96442;
+  --ambient-4-opacity: 0.09;
 }
 
 [data-theme='dark'] {
@@ -285,6 +315,25 @@
   --focus: #ede9de;
   --danger: #e5776b;
   --success: #7da674;
+
+  /* Ambient field — the version that already worked, kept, with the terracotta
+     swapped for the dark theme's readable tone. Additive light on a dark ground. */
+  --ambient-glow: radial-gradient(
+    circle at 50% 50%,
+    color-mix(in oklab, #e08a5f 16%, transparent) 0%,
+    color-mix(in oklab, #c9a227 13%, transparent) 38%,
+    transparent 70%
+  );
+  --ambient-glow-opacity: 0.6;
+
+  --ambient-1: #c9a227;
+  --ambient-1-opacity: 0.16;
+  --ambient-2: #8fa3ad;
+  --ambient-2-opacity: 0.13;
+  --ambient-3: #e8e3d7;
+  --ambient-3-opacity: 0.1;
+  --ambient-4: #e08a5f;
+  --ambient-4-opacity: 0.1;
 }
 
 /* Follow the operating system until the visitor chooses. Once they do, the
@@ -322,6 +371,26 @@
     --focus: #ede9de;
     --danger: #e5776b;
     --success: #7da674;
+
+    /* Kept in step with [data-theme='dark'] above. If the ambient field is ever
+       missing on a system-dark visitor who has not touched the toggle, it is
+       because this block drifted from that one. */
+    --ambient-glow: radial-gradient(
+      circle at 50% 50%,
+      color-mix(in oklab, #e08a5f 16%, transparent) 0%,
+      color-mix(in oklab, #c9a227 13%, transparent) 38%,
+      transparent 70%
+    );
+    --ambient-glow-opacity: 0.6;
+
+    --ambient-1: #c9a227;
+    --ambient-1-opacity: 0.16;
+    --ambient-2: #8fa3ad;
+    --ambient-2-opacity: 0.13;
+    --ambient-3: #e8e3d7;
+    --ambient-3-opacity: 0.1;
+    --ambient-4: #e08a5f;
+    --ambient-4-opacity: 0.1;
   }
 }
 

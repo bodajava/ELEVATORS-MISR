@@ -31,6 +31,19 @@ import { useEffect, useRef } from 'react';
  *    which is cheap. A pointer-follow background on a phone is spent battery.
  *  · Document hidden — the loop stops entirely and restarts on `visibilitychange`.
  */
+/**
+ * Where the four drifting forms sit and how hard they fall off.
+ *
+ * Position and shape only — the colour and opacity of each is `--ambient-N` / `--ambient-N-opacity`,
+ * so the two themes tune the field without the component knowing which one is active.
+ */
+const FORMS = [
+  { position: 'start-[8%] top-[12%] h-[52vmin] w-[52vmin]', origin: '35% 35%', falloff: '68%' },
+  { position: 'start-[58%] top-[4%] h-[46vmin] w-[46vmin]', origin: '50% 50%', falloff: '70%' },
+  { position: 'start-[24%] top-[58%] h-[62vmin] w-[62vmin]', origin: '45% 45%', falloff: '72%' },
+  { position: 'start-[68%] top-[62%] h-[38vmin] w-[38vmin]', origin: '50% 50%', falloff: '70%' },
+] as const;
+
 export function AmbientField() {
   const rootRef = useRef<HTMLDivElement>(null);
   const dotRef = useRef<HTMLDivElement>(null);
@@ -176,32 +189,34 @@ export function AmbientField() {
       // intercept a click, a text selection or a form field.
       className="pointer-events-none fixed inset-0 -z-10 overflow-hidden"
     >
-      {/* The forms. Opacity is deliberately low enough that body text over them is
-          unaffected — the field yields to contrast, always. */}
-      {[
-        'start-[8%] top-[12%] h-[52vmin] w-[52vmin] bg-[radial-gradient(circle_at_35%_35%,#C9A227_0%,transparent_68%)] opacity-[0.11]',
-        'start-[58%] top-[4%] h-[46vmin] w-[46vmin] bg-[radial-gradient(circle_at_50%_50%,#8FA3AD_0%,transparent_70%)] opacity-[0.10]',
-        'start-[24%] top-[58%] h-[62vmin] w-[62vmin] bg-[radial-gradient(circle_at_45%_45%,#E8E3D7_0%,transparent_72%)] opacity-[0.5]',
-        'start-[68%] top-[62%] h-[38vmin] w-[38vmin] bg-[radial-gradient(circle_at_50%_50%,#FF6B00_0%,transparent_70%)] opacity-[0.055]',
-      ].map((className, i) => (
+      {/* The forms. Colour and opacity come from theme tokens, not from literals: the old
+          fixed values were tuned for a dark ground, and on linen the pale one in particular
+          was light-on-light and contributed nothing. Opacity stays low enough that body text
+          over them is unaffected — the field yields to contrast, always. */}
+      {FORMS.map((form, i) => (
         <span
-          key={i}
+          key={form.position}
           ref={(el) => {
             formRefs.current[i] = el;
           }}
-          className={`absolute block rounded-full blur-[64px] will-change-transform ${className}`}
+          className={`absolute block rounded-full blur-[64px] will-change-transform ${form.position}`}
+          style={{
+            background: `radial-gradient(circle at ${form.origin}, var(--ambient-${i + 1}) 0%, transparent ${form.falloff})`,
+            opacity: `var(--ambient-${i + 1}-opacity)`,
+          }}
         />
       ))}
 
-      {/* The pointer light. Warm, wide and very faint — brass catching a light source rather
-          than a spotlight. Hidden with the cursor on touch and under reduced motion. */}
+      {/* The pointer light. On a dark ground it is warm light falling on brass; on linen it is
+          a soft warm shading instead, because light over light has no delta to show. Both come
+          from `--ambient-glow`. Hidden with the cursor on touch and under reduced motion. */}
       <div
         ref={glowRef}
         data-cursor-glow
-        className="absolute top-0 left-0 hidden size-[46vmin] rounded-full opacity-[0.5] blur-[70px] will-change-transform"
+        className="absolute top-0 left-0 hidden size-[46vmin] rounded-full blur-[70px] will-change-transform"
         style={{
-          background:
-            'radial-gradient(circle at 50% 50%, rgba(255,107,0,0.10) 0%, rgba(201,162,39,0.09) 38%, transparent 70%)',
+          background: 'var(--ambient-glow)',
+          opacity: 'var(--ambient-glow-opacity)',
         }}
       />
 
