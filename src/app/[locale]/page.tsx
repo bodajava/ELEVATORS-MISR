@@ -72,15 +72,16 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
       <JsonLd data={homePageSchema(l)} />
 
       <Hero locale={l} heroAsset={heroAsset} />
+      {/* Directly after the hero, and outside it — a sibling section, never inside the hero's
+          pinned stage. The hero's own scroll sequence completes before this begins. It shares
+          no file with the walkthrough strip further down. */}
+      <MarketingFilms locale={l} />
       <Proof locale={l} />
       <Ascent floors={floors} eyebrow={ascent.eyebrow[l]} heading={ascent.heading[l]} locale={l} />
       <PanoramaStory locale={l} />
       <SelectedProjects locale={l} />
       <HomeProcess locale={l} />
       <MediaStories locale={l} />
-      {/* The company's own advertisements, distinct from the walkthrough strip above and
-          sharing no file with it. See components/sections/marketing-films.tsx. */}
-      <MarketingFilms locale={l} />
       <SocialProof locale={l} />
       <InspectionCta locale={l} />
     </>

@@ -107,7 +107,7 @@ Binding outputs of Phase 0 that later work must respect:
   the site's English brand name. Unresolved — do not ship those clips until the user decides.
   Three of them had reached the public set anyway and were withdrawn on 2026-08-09; see below.
 - **The four presenter advertisements ship** (since 2026-08-09), on the owner's explicit
-  written authorisation, in a dedicated **Marketing Films** carousel on the homepage. They carry
+  written authorisation, in a dedicated **Marketing Films** carousel placed directly after the hero on the homepage. They carry
   `rights: owner-approved` with `approved_by`, `approved_on` and `held_for`, so the hold each
   one overrode is preserved rather than erased, and a test fails if any of the three is missing.
   Nothing was removed from the footage. **This override is narrowly scoped to those four files**

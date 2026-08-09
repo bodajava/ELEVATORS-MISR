@@ -125,6 +125,47 @@ describe('the code path from folder to slider', () => {
       .replace(/\/\*[\s\S]*?\*\//g, '')
       .replace(/(^|[^:])\/\/.*$/gm, '$1');
 
+  it('sits directly after the hero on the homepage', () => {
+    const page = read('src/app/[locale]/page.tsx');
+    const order = [...page.matchAll(/<([A-Z][A-Za-z]+)\b/g)].map((m) => m[1]);
+    const hero = order.indexOf('Hero');
+    const slider = order.indexOf('MarketingFilms');
+    expect(hero, 'Hero not rendered').toBeGreaterThan(-1);
+    expect(slider, 'MarketingFilms not rendered').toBeGreaterThan(-1);
+    // Immediately after, and as a sibling — never nested inside the hero's pinned stage.
+    expect(slider - hero).toBe(1);
+  });
+
+  it('renders one real block and two clone blocks, and only the real one can play', () => {
+    const carousel = read('src/components/media/film-carousel.tsx');
+    // Three blocks, so forward from the last and back from the first both have runway.
+    expect(carousel).toMatch(/length:\s*count\s*\*\s*3/);
+    // Clones: hidden from accessibility, inert, and a poster rather than a player.
+    expect(carousel).toMatch(/'aria-hidden':\s*true,\s*inert:\s*true/);
+    expect(carousel).toMatch(/real\s*\?\s*\(\s*<AmbientVideo/);
+    // Exactly one card can ever be handed permission to play.
+    expect(carousel).toMatch(/active=\{isPlaying && expanded === null\}/);
+  });
+
+  it('holds the auto-advance for every required reason', () => {
+    const carousel = read('src/components/media/film-carousel.tsx');
+    const gate = /const running =([\s\S]*?);/.exec(carousel)?.[1] ?? '';
+    for (const condition of [
+      '!paused',
+      '!hovering',
+      '!dragging',
+      'tabVisible',
+      'playing === null',
+      'expanded === null',
+    ]) {
+      expect(gate, `auto-advance is not held by ${condition}`).toContain(condition);
+    }
+    // One timer, cleared on teardown, so a Strict Mode double-invoke cannot leave two.
+    expect(carousel).toMatch(/prefers-reduced-motion: reduce/);
+    expect(carousel).toMatch(/return \(\) => window\.clearInterval\(timer\)/);
+    expect(carousel).toMatch(/interval = 4200/);
+  });
+
   it('does not reduce the set anywhere between the manifest and the rail', () => {
     // A guard against the specific ways this silently shrinks. `marketingFilms()` may sort,
     // but it may not slice, cap or filter on anything except the role.
