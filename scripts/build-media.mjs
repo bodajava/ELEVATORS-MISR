@@ -173,6 +173,9 @@ const SHIPPABLE_ROLES = new Set([
   'optional',
   'hero-video-primary',
   'hero-video-alt',
+  // The four presenter advertisements, published on the owner's instruction. See
+  // `owner-approved` in `isShippable`.
+  'marketing-film',
 ]);
 
 /**
@@ -188,9 +191,7 @@ const SHIPPABLE_ROLES = new Set([
  * photography and walkthrough videos already carry that load. Documented in the manifest's
  * `excluded` list so the decision is visible rather than silent.
  */
-const EXCLUDED_ROLES_REASON = {
-  'media-story': 'Arabic presenter advertisement — contains third-party-branded B-roll mid-film',
-};
+const EXCLUDED_ROLES_REASON = {};
 
 /**
  * Video is held to a stricter rule than stills.
@@ -210,6 +211,19 @@ const EXCLUDED_ROLES_REASON = {
  */
 function isShippable(record) {
   if (!SHIPPABLE_ROLES.has(record.role)) return false;
+
+  // ── The one way past the gate ─────────────────────────────────────────────
+  // `owner-approved` means the site owner looked at the specific file and instructed that it
+  // ship anyway. It is deliberately a *separate* value rather than rewriting the record to
+  // `clear`, because the footage has not changed: the presenter, the credits and the
+  // third-party marks are all still in it. Recording it as `clear` would erase the reason
+  // anyone ever hesitated, and a later audit would have nothing left to re-examine.
+  //
+  // Every such record must carry `approved_by` and `approved_on`, and
+  // tests/unit/media-rights.test.ts fails if one does not — so an override cannot be a quiet
+  // edit to a field.
+  if (record.rights === 'owner-approved') return true;
+
   if (record.rights === 'third-party-watermark') return false;
   if (record.rights === 'brand-name-conflict') return false;
 

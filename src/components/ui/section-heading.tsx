@@ -12,6 +12,8 @@ type SectionHeadingProps = {
   lede?: ReactNode;
   as?: 'h1' | 'h2' | 'h3';
   className?: string;
+  /** Put on the heading element, so a section can name itself with `aria-labelledby`. */
+  id?: string;
 };
 
 /**
@@ -29,6 +31,7 @@ export function SectionHeading({
   lede,
   as: Heading = 'h2',
   className,
+  id,
 }: SectionHeadingProps) {
   return (
     <div className={cn('flex flex-col', className)}>
@@ -45,6 +48,7 @@ export function SectionHeading({
 
       <Reveal variant="mask" className="mt-6">
         <Heading
+          id={id}
           className={cn(
             'text-ink',
             Heading === 'h1'

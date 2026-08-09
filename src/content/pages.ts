@@ -227,3 +227,87 @@ export const contactPage: {
     ar: 'نعمل على تأكيد رقم الهاتف والبريد الإلكتروني المنشورَين. وإلى أن يتم ذلك لن نَنشر رقمًا، لأن رقمًا يتبيّن خطؤه أسوأ من عدم وجود رقم. النموذج أعلاه يصل إلى الفريق.',
   },
 };
+
+/**
+ * The presenter advertisements on the About page.
+ *
+ * ── What is deliberately not claimed here ───────────────────────────────────
+ * The films sell; this copy does not. No project count, no years in business, no client names,
+ * no superlatives — none of that is verifiable from anything in the repository, and a
+ * presenter saying it on camera does not make it a claim the site can print.
+ *
+ * The titles are ordinals rather than descriptions. Each film is a continuous piece to camera
+ * covering several points, so any short title would be an editorial summary of an argument
+ * rather than a fact about the frame.
+ *
+ * The lede says plainly that they are in Arabic and carry sound. All four are spoken and
+ * captioned in Arabic with no English track, and an English visitor should know that before
+ * pressing play rather than after.
+ */
+export const marketingFilmsSection: {
+  eyebrow: Bilingual;
+  heading: Bilingual;
+  lede: Bilingual;
+  badge: Bilingual;
+  filmAlt: Bilingual;
+  filmTitle: Record<Locale, (n: number) => string>;
+  expand: Record<Locale, (n: number) => string>;
+  controls: Record<
+    Locale,
+    {
+      group: string;
+      slide: string;
+      pause: string;
+      play: string;
+      previous: string;
+      next: string;
+      watch: string;
+      goTo: string;
+      close: string;
+    }
+  >;
+} = {
+  eyebrow: { en: 'In our own words', ar: 'بكلماتنا' },
+  heading: { en: 'Marketing Films', ar: 'أفلامنا التسويقية' },
+  lede: {
+    en: 'Our own films introducing the work. They are spoken and captioned in Arabic and they carry sound — nothing plays audio until you ask it to.',
+    ar: 'أفلامنا التي تعرّف بالأعمال. الكلام والترجمة بالعربية، ومعها صوت — ولا يبدأ أي صوت إلا إذا طلبته.',
+  },
+  badge: { en: 'Arabic · with sound', ar: 'بالعربية · بصوت' },
+  filmAlt: {
+    en: 'A presenter speaking to camera about the company, with Arabic captions and views of finished panorama elevator installations.',
+    ar: 'مقدِّمة تتحدث إلى الكاميرا عن الشركة، مع ترجمة عربية ولقطات لتركيبات مصاعد بانوراما منفَّذة.',
+  },
+  filmTitle: {
+    en: (n) => `Film ${String(n).padStart(2, '0')}`,
+    ar: (n) => `فيلم ${String(n).padStart(2, '0')}`,
+  },
+  expand: {
+    en: (n) => `Watch film ${n} full screen`,
+    ar: (n) => `شاهد الفيلم ${n} بملء الشاشة`,
+  },
+  controls: {
+    en: {
+      group: 'Marketing films',
+      slide: 'film',
+      pause: 'Pause',
+      play: 'Play',
+      previous: 'Previous film',
+      next: 'Next film',
+      watch: 'Watch',
+      goTo: 'Show film',
+      close: 'Close the film',
+    },
+    ar: {
+      group: 'الأفلام التسويقية',
+      slide: 'فيلم',
+      pause: 'إيقاف',
+      play: 'تشغيل',
+      previous: 'الفيلم السابق',
+      next: 'الفيلم التالي',
+      watch: 'شاهد',
+      goTo: 'اعرض الفيلم',
+      close: 'إغلاق الفيلم',
+    },
+  },
+};

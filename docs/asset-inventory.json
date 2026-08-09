@@ -1369,10 +1369,13 @@
         "major_brand": "isom"
       },
       "project_slug": "marketing",
-      "role": "none",
-      "rights": "people-consent",
-      "notes": "360x640, too low to ship AND shows the same identifiable presenter as the other marketing films. Originally recorded as rights=clear, which was wrong: the resolution note masked the consent problem. Corrected 2026-08-08 after frame extraction.",
-      "shippable": false
+      "role": "marketing-film",
+      "rights": "owner-approved",
+      "approved_by": "site owner (bbido761@gmail.com)",
+      "approved_on": "2026-08-09",
+      "held_for": "people-consent",
+      "notes": "360x640 — the lowest-resolution original in the set, so it is drawn small. Presenter to camera with burned-in Arabic captions; cuts to an elevator card carrying a third-party 'MK' mark. The consent hold recorded on 2026-08-08 still describes the footage accurately; the owner instructed publication anyway. Nothing was removed from the file.",
+      "shippable": true
     },
     {
       "path": "assets/VIDOES/MARKTEING-video/savefromins.com  0 1080P.mp4",
@@ -1403,10 +1406,13 @@
         "encoder": "Lavf62.12.100"
       },
       "project_slug": "marketing",
-      "role": "none",
-      "rights": "third-party-watermark",
-      "notes": "@solephiworks + @mohamedm credits; Arabic captions",
-      "shippable": false
+      "role": "marketing-film",
+      "rights": "owner-approved",
+      "approved_by": "site owner (bbido761@gmail.com)",
+      "approved_on": "2026-08-09",
+      "held_for": "third-party-watermark",
+      "notes": "1080x1920, the highest-resolution of the four. Carries the 'Arab Egypt for elevators' watermark and an @mohamedm creator credit in the lower corner; @solephiworks also credited. Both credits left intact — the owner instructed publication, not removal.",
+      "shippable": true
     },
     {
       "path": "assets/VIDOES/MARKTEING-video/savefromins.com  0 720P.mp4",
@@ -1437,10 +1443,13 @@
         "encoder": "Lavf62.12.100"
       },
       "project_slug": "marketing",
-      "role": "media-story",
-      "rights": "people-consent",
-      "notes": "presenter ad, opens with animated logo bumper; Arabic only",
-      "shippable": false
+      "role": "marketing-film",
+      "rights": "owner-approved",
+      "approved_by": "site owner (bbido761@gmail.com)",
+      "approved_on": "2026-08-09",
+      "held_for": "people-consent",
+      "notes": "720x1280. Presenter to camera; cuts to an elevator card carrying a third-party 'DAR' mark around 15s. Arabic captions burned in. Left intact.",
+      "shippable": true
     },
     {
       "path": "assets/VIDOES/MARKTEING-video/video.mp4",
@@ -1470,10 +1479,13 @@
         "major_brand": "isom"
       },
       "project_slug": "marketing",
-      "role": "media-story",
-      "rights": "people-consent",
-      "notes": "presenter ad; Arabic only",
-      "shippable": false
+      "role": "marketing-film",
+      "rights": "owner-approved",
+      "approved_by": "site owner (bbido761@gmail.com)",
+      "approved_on": "2026-08-09",
+      "held_for": "people-consent",
+      "notes": "720x1280. A second presenter; carries the company's own Arabic badge in both upper corners and no third-party mark. The cleanest of the four.",
+      "shippable": true
     },
     {
       "path": "assets/VIDOES/SHOW PRODUT video/2026-08-05 23.11.30.mp4",

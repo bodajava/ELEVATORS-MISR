@@ -106,7 +106,13 @@ Binding outputs of Phase 0 that later work must respect:
 - **Brand-name conflict.** Several videos have "ARAB EGYPT FOR ELEVATORS" burned in, which is not
   the site's English brand name. Unresolved — do not ship those clips until the user decides.
   Three of them had reached the public set anyway and were withdrawn on 2026-08-09; see below.
-- **The shipping video set is four films, not nine** (since 2026-08-09). A frame-by-frame audit
+- **The four presenter advertisements ship** (since 2026-08-09), on the owner's explicit
+  written authorisation, in a dedicated **Marketing Films** carousel on the homepage. They carry
+  `rights: owner-approved` with `approved_by`, `approved_on` and `held_for`, so the hold each
+  one overrode is preserved rather than erased, and a test fails if any of the three is missing.
+  Nothing was removed from the footage. **This override is narrowly scoped to those four files**
+  — every other rights rule is unchanged.
+- **The project video set is four walkthroughs, not nine** (since 2026-08-09). A frame-by-frame audit
   of every shipping clip found five whose `rights` had never matched their content: two with the
   brand-name watermark, one with that plus a third-party developer's "HYDE PARK DEVELOPMENT"
   title card, and two showing identifiable people. Each had been recorded `clear` because its
@@ -144,7 +150,7 @@ remaining credential list:
 
 Verification harnesses live in `scripts/` and are run against a dev or production server:
 `hero-check`, `form-check`, `matrix-check`, `emptiness`, `about-check`, `perf`, `index-check`,
-`marquee-check`, `grid-check`, `ambient-check`. A terminal
+`marquee-check`, `grid-check`, `ambient-check`, `marketing-check`. A terminal
 command passing is not visual completion — `emptiness.mjs` exists because the earlier
 band-based dead-space check reported clean pages that were visibly empty.
 

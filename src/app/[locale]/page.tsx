@@ -5,6 +5,7 @@ import { JsonLd } from '@/components/seo/json-ld';
 import { Ascent } from '@/components/sections/ascent';
 import { Hero } from '@/components/sections/hero';
 import { InspectionCta } from '@/components/sections/inspection-cta';
+import { MarketingFilms } from '@/components/sections/marketing-films';
 import { MediaStories } from '@/components/sections/media-stories';
 import { PanoramaStory } from '@/components/sections/panorama-story';
 import { HomeProcess } from '@/components/sections/home-process';
@@ -77,6 +78,9 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
       <SelectedProjects locale={l} />
       <HomeProcess locale={l} />
       <MediaStories locale={l} />
+      {/* The company's own advertisements, distinct from the walkthrough strip above and
+          sharing no file with it. See components/sections/marketing-films.tsx. */}
+      <MarketingFilms locale={l} />
       <SocialProof locale={l} />
       <InspectionCta locale={l} />
     </>

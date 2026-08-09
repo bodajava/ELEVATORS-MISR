@@ -137,10 +137,33 @@ export function verticalWalkthroughs(): VideoAsset[] {
  * in the first place.
  */
 export function productFilms(): VideoAsset[] {
-  return [...media.videos].sort((a, b) => {
-    const landscape = (v: VideoAsset) => (v.orientation === 'landscape' ? 0 : 1);
-    return landscape(a) - landscape(b) || b.width * b.height - a.width * a.height;
-  });
+  // The presenter advertisements are excluded here and shown on their own — see
+  // `marketingFilms()`. Without this filter they would be pulled silently into the homepage
+  // strip and the panorama rail as well, simply because they are videos.
+  return media.videos
+    .filter((v) => v.role !== 'marketing-film')
+    .sort((a, b) => {
+      const landscape = (v: VideoAsset) => (v.orientation === 'landscape' ? 0 : 1);
+      return landscape(a) - landscape(b) || b.width * b.height - a.width * a.height;
+    });
+}
+
+/**
+ * The presenter advertisements.
+ *
+ * Held back through Phase 0 and published on 2026-08-09 on the owner's explicit instruction;
+ * the register records the approval and what it overrode, per file. They are separated from
+ * `productFilms()` deliberately — those are silent walkthroughs of finished work, these are
+ * pieces to camera with burned-in captions and a voice track, and mixing the two in one rail
+ * would misrepresent both.
+ *
+ * Ordered by resolution, highest first, because the set spans 360x640 to 1080x1920 and the
+ * weakest should not lead.
+ */
+export function marketingFilms(): VideoAsset[] {
+  return media.videos
+    .filter((v) => v.role === 'marketing-film')
+    .sort((a, b) => b.width * b.height - a.width * a.height);
 }
 
 /** Films not already tied to a specific project page. */

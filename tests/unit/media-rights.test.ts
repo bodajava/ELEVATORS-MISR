@@ -17,7 +17,17 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 
 const inventory = JSON.parse(
   readFileSync(new URL('../../docs/asset-inventory.json', import.meta.url), 'utf8')
-) as { assets: { path: string; rights: string; role: string; kind?: string }[] };
+) as {
+  assets: {
+    path: string;
+    rights: string;
+    role: string;
+    kind?: string;
+    approved_by?: string;
+    approved_on?: string;
+    held_for?: string;
+  }[];
+};
 
 const manifest = JSON.parse(
   readFileSync(new URL('../../src/content/generated/media-manifest.json', import.meta.url), 'utf8')
@@ -36,7 +46,7 @@ describe('rights gate', () => {
     expect(leaked.map((a) => a.source)).toEqual([]);
   });
 
-  it('ships no video of a person without publication consent', () => {
+  it('ships no video of a person without either consent or a recorded override', () => {
     const leaked = manifest.videos.filter((v) => rightsOf.get(v.source) === 'people-consent');
     expect(leaked.map((v) => v.source)).toEqual([]);
   });
@@ -53,16 +63,37 @@ describe('rights gate', () => {
     expect(leaked.map((a) => a.source)).toEqual([]);
   });
 
-  it('keeps every marketing film out of the shipping set', () => {
-    const leaked = shipping.filter((a) => a.source.includes('MARKTEING-video'));
-    expect(leaked.map((a) => a.source)).toEqual([]);
-  });
-
-  it('classifies all four marketing films as blocked — none is merely "clear"', () => {
+  it('never records an override as plain "clear"', () => {
+    // The four presenter advertisements ship from 2026-08-09 on the owner's instruction.
+    // What must not happen is the reason disappearing: rewriting these to `clear` would say
+    // the footage was fine all along, and the next audit would find nothing to re-examine.
+    // They carry `owner-approved` plus the hold it overrode.
     const marketing = inventory.assets.filter((a) => a.path.includes('MARKTEING-video'));
     expect(marketing).toHaveLength(4);
     for (const asset of marketing) {
       expect(asset.rights, asset.path).not.toBe('clear');
+    }
+  });
+
+  it('requires every override to name who approved it and when', () => {
+    const overridden = inventory.assets.filter((a) => a.rights === 'owner-approved');
+    expect(overridden.length).toBeGreaterThan(0);
+    for (const asset of overridden) {
+      expect(asset.approved_by, `${asset.path} has no approved_by`).toBeTruthy();
+      expect(asset.approved_on, `${asset.path} has no approved_on`).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      // The hold it overrode has to survive the override, or the record loses the only
+      // information a re-review would need.
+      expect(asset.held_for, `${asset.path} does not record what it overrode`).toBeTruthy();
+    }
+  });
+
+  it('publishes the presenter films only where they were sent', () => {
+    // They are a separate destination on the About page, not folded into the project films.
+    // `productFilms()` returns every video by role, so without the split they would appear in
+    // the homepage strip and the panorama rail too, purely because they are videos.
+    const marketing = manifest.videos.filter((v) => v.source.includes('MARKTEING-video'));
+    for (const film of marketing) {
+      expect(film.role, film.source).toBe('marketing-film');
     }
   });
 
@@ -73,9 +104,16 @@ describe('rights gate', () => {
     // for elevators" watermark, one with both that and a "HYDE PARK DEVELOPMENT" card, and two
     // showing identifiable people. Each had been recorded as `clear` because its note captured
     // resolution or watermark-absence rather than what the footage shows.
-    expect(manifest.videos).toHaveLength(4);
-    for (const video of manifest.videos) {
+    // Four project walkthroughs. The presenter films are counted separately: they ship under
+    // the recorded override, not because they are clear, and folding them into this count
+    // would hide that distinction behind a number.
+    const walkthroughs = manifest.videos.filter((v) => v.role !== 'marketing-film');
+    expect(walkthroughs).toHaveLength(4);
+    for (const video of walkthroughs) {
       expect(rightsOf.get(video.source), video.source).toBe('clear');
+    }
+    for (const video of manifest.videos.filter((v) => v.role === 'marketing-film')) {
+      expect(rightsOf.get(video.source), video.source).toBe('owner-approved');
     }
   });
 
