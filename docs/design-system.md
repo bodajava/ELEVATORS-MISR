@@ -205,6 +205,19 @@ Other rules:
 - Frames keep their source orientation where forcing a common ratio would crop the subject —
   the social-proof row is a contact sheet with a ragged bottom edge, by design.
 - Watermarks are shown honestly. Crops are planned around them, never through them.
+- **A grid row is only as level as its shortest cell.** Cells that carry their own aspect
+  ratio — a wide one at `21/9` beside a narrow one at `3/4` — leave the short one hanging with
+  a void beneath it, because a grid row takes the height of its tallest item. On the projects
+  index that void measured 300px+ and was the reported "empty space". Give the grid an
+  explicit row height (`grid-auto-rows`) and let the span vary the width only.
+  `scripts/grid-check.mjs` measures the worst in-row height difference on every grid and
+  allows exactly one documented exception, marked `data-ragged` on the element itself.
+- **`Reveal` breaks the percentage-height chain.** Its inner wrapper is auto-height, so a
+  child relying on `h-full` inside a sized grid cell resolves 100% against zero. Pass
+  `stretch`.
+- **Never put `maxWidth` on a `fill` image.** `fill` positions it absolutely at `inset-0`, so
+  a max-width does not prevent upscaling — it shrinks the box and leaves a bare strip of the
+  dark well down one side. Cap the _cell_ width instead.
 - **A stack of frames sharing one opening must be taken out of flow.** Where several images
   occupy the same grid cell so one can be revealed at a time, leaving them in flow lets the
   auto-sized row grow to the tallest _intrinsic_ height in the set — the narrowest source. On
@@ -234,6 +247,13 @@ Four rules make it work, and each was a bug first:
   mechanism to stop it (WCAG 2.2.2). The toggle stops the travel _and_ the footage; hover and
   focus pause it too. Under `prefers-reduced-motion` it never travels and becomes an ordinary
   scrollable strip.
+
+Tiles are buttons that open the film full-screen in a real `<dialog>` — `showModal()` gives
+the top layer, focus containment and Escape-to-close from the platform, none of which a
+hand-rolled overlay gets for free. Opening one stops the strip and its footage, so a second
+clip never decodes behind the viewer. Every duplicated copy is `inert` as well as
+`aria-hidden`: a focusable control inside an aria-hidden subtree puts the tab order somewhere
+a screen reader has been told does not exist.
 
 Tiles share one height and take their width from each film's own ratio — the same film-strip
 rule the paged rail uses, for the same reason: a shared width letterboxes the portrait clips and

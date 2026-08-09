@@ -4,6 +4,7 @@ import { Pause, Play } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 import { AmbientVideo } from '@/components/media/ambient-video';
+import { FilmLightbox, type LightboxFilm } from '@/components/media/film-lightbox';
 import type { VideoAsset } from '@/lib/media';
 import { cn } from '@/lib/utils';
 
@@ -13,6 +14,18 @@ export type MarqueeFilm = {
   label: string;
   /** Overlaid on the frame. No card body; the frame carries its own caption. */
   title: string;
+  /** Top-leading chip. A fact about the frame — the finish — not a marketing word. */
+  badge: string;
+  /** Index and duration, for the expanded view. */
+  meta: string;
+  /**
+   * Accessible name of the tile's open-this-film button, e.g. "Watch: Brass and glass".
+   *
+   * Resolved per film on the server rather than built here from a formatter. A server
+   * component cannot hand a function to a client component — React refuses to serialise it —
+   * and that is precisely what took the homepage down once already.
+   */
+  expandLabel: string;
 };
 
 /**
@@ -60,13 +73,26 @@ export function FilmMarquee({
 }: {
   films: MarqueeFilm[];
   dir: 'ltr' | 'rtl';
-  labels: { group: string; pause: string; play: string };
+  labels: {
+    group: string;
+    pause: string;
+    play: string;
+    watch: string;
+    close: string;
+    previous: string;
+    next: string;
+  };
   speed?: number;
   className?: string;
 }) {
   const trackRef = useRef<HTMLDivElement>(null);
   const groupRef = useRef<HTMLUListElement>(null);
   const [paused, setPaused] = useState(false);
+  const [expanded, setExpanded] = useState<number | null>(null);
+
+  // The strip stops while a film is open. Two clips decoding at once is the thing the whole
+  // playback gate exists to prevent, and a band travelling behind a modal is just noise.
+  const running = !paused && expanded === null;
 
   // Measured into CSS custom properties on the node itself rather than into React state.
   // The track re-measures on every resize and on every font or media load; routing that
@@ -149,7 +175,7 @@ export function FilmMarquee({
         <div
           ref={trackRef}
           data-marquee-track
-          data-paused={paused ? 'true' : undefined}
+          data-paused={running ? undefined : 'true'}
           style={{ ['--marquee-dir' as string]: dir === 'rtl' ? '1' : '-1' }}
           className={[
             'flex w-max gap-4 sm:gap-6',
@@ -165,12 +191,16 @@ export function FilmMarquee({
               key={copy.key}
               ref={copy.key === 'lead' ? groupRef : undefined}
               aria-hidden={copy.hidden || undefined}
+              // `inert` as well as `aria-hidden`, because each tile is now a real button.
+              // A focusable control inside an aria-hidden subtree is a genuine defect: the
+              // tab order walks into something screen readers have been told is not there.
+              inert={copy.hidden || undefined}
               className="flex shrink-0 items-start gap-4 sm:gap-6"
             >
-              {films.map(({ video: film, label, title }) => (
+              {films.map(({ video: film, label, title, badge, expandLabel }, filmIndex) => (
                 <li
                   key={film.id}
-                  className="relative shrink-0 motion-reduce:snap-start"
+                  className="shrink-0 motion-reduce:snap-start"
                   // Uniform height, width from the film's own ratio — the same film-strip rule
                   // the rail uses. Forcing one shared width would letterbox the six portrait
                   // clips inside wide boxes and crop the three landscape ones.
@@ -179,26 +209,47 @@ export function FilmMarquee({
                     height: 'var(--film-h)',
                   }}
                 >
-                  <div className="aperture size-full overflow-hidden">
+                  {/* The whole tile opens the film. A button, not a div with a click handler:
+                      it is reachable by keyboard, it announces itself, and focus on it pauses
+                      the strip so it cannot travel out from under the pointer mid-click. */}
+                  <button
+                    type="button"
+                    onClick={() => setExpanded(filmIndex)}
+                    aria-label={expandLabel}
+                    className="group/tile aperture relative size-full overflow-hidden text-start focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                  >
                     <AmbientVideo
                       video={film}
                       label={label}
-                      // No per-tile controller: the tile is moving, and the echo copy is
-                      // aria-hidden and so may hold nothing focusable. One control for the
-                      // whole band replaces them.
+                      // No per-tile controller: the tile is a control in its own right, and a
+                      // second set of buttons on a moving target would be unusable.
                       decorative
-                      active={!paused}
+                      active={running}
                       className="size-full"
                     />
-                  </div>
 
-                  {/* Caption on the frame, over a scrim — not a card body under it. */}
-                  <p
-                    className="pointer-events-none absolute inset-x-0 bottom-0 rounded-b-(--radius-media) bg-linear-to-t from-black/70 to-transparent px-3 pt-8 pb-3 text-sm font-semibold text-white"
-                    aria-hidden={copy.hidden || undefined}
-                  >
-                    {title}
-                  </p>
+                    {/* Badge, top-leading — the finish, which is a fact about the frame. */}
+                    <span className="absolute start-3 top-3 z-10 rounded-(--radius-control) bg-carbon/70 px-2 py-1 annotation text-ink-on-dark">
+                      {badge}
+                    </span>
+
+                    <span
+                      aria-hidden
+                      className="pointer-events-none absolute inset-x-0 bottom-0 h-2/5 bg-linear-to-t from-carbon/90 via-carbon/45 to-transparent"
+                    />
+
+                    <span className="absolute inset-x-0 bottom-0 z-10 block p-3">
+                      <span className="block truncate font-display text-sm text-ink-on-dark drop-shadow-[0_1px_6px_rgba(0,0,0,0.7)] sm:text-base">
+                        {title}
+                      </span>
+                      {/* Reads as the reference's pill, but it is a label rather than a second
+                          control — the tile itself is the button, and nesting one inside
+                          another is invalid. */}
+                      <span className="duration-fast mt-2 inline-block rounded-(--radius-control) bg-paper/90 px-2.5 py-1 text-2xs font-semibold text-ink transition-colors ease-standard group-hover/tile:bg-accent group-hover/tile:text-on-accent">
+                        {labels.watch}
+                      </span>
+                    </span>
+                  </button>
                 </li>
               ))}
             </ul>
@@ -208,6 +259,7 @@ export function FilmMarquee({
 
       <button
         type="button"
+        data-marquee-toggle
         onClick={() => setPaused((value) => !value)}
         className="duration-fast mt-4 inline-flex min-h-11 items-center gap-2 rounded-(--radius-control) border border-rule px-3.5 text-sm text-ink-2 transition-colors ease-standard hover:border-ink-3 hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
       >
@@ -218,6 +270,15 @@ export function FilmMarquee({
         )}
         {paused ? labels.play : labels.pause}
       </button>
+
+      <FilmLightbox
+        films={films as LightboxFilm[]}
+        index={expanded}
+        dir={dir}
+        labels={labels}
+        onClose={() => setExpanded(null)}
+        onIndexChange={setExpanded}
+      />
     </div>
   );
 }

@@ -26,12 +26,21 @@ export function Reveal({
   as: Tag = 'div',
   /** `mask` clips and rises (headlines, media). `fade` only rises (body copy, list items). */
   variant = 'fade',
+  /**
+   * Pass the parent's height through to the content.
+   *
+   * Needed when the reveal is itself a sized grid or flex item and the content inside relies
+   * on `h-full` — without it the inner wrapper is auto-height, collapses to zero, and the
+   * child resolves `100%` against nothing.
+   */
+  stretch = false,
 }: {
   children: ReactNode;
   delay?: number;
   className?: string;
   as?: ElementType;
   variant?: 'mask' | 'fade';
+  stretch?: boolean;
 }) {
   const scope = useRef<HTMLElement>(null);
 
@@ -78,8 +87,13 @@ export function Reveal({
   return (
     <Tag ref={scope} data-reveal className={cn(variant === 'mask' && 'overflow-clip', className)}>
       {/* A single child wrapper is required: GSAP animates it while the parent does the
-          clipping, which is what makes the masked variant read as a rise rather than a slide. */}
-      <div className={variant === 'mask' ? undefined : 'contents-reveal'}>{children}</div>
+          clipping, which is what makes the masked variant read as a rise rather than a slide.
+          It is also a break in the percentage-height chain, which matters wherever the
+          reveal is a grid or flex item with a definite height — the wrapper collapses to 0
+          and the content inside it has nothing to be 100% of. `stretch` restores it. */}
+      <div className={cn(variant === 'mask' ? undefined : 'contents-reveal', stretch && 'h-full')}>
+        {children}
+      </div>
     </Tag>
   );
 }

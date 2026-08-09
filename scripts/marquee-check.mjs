@@ -246,7 +246,9 @@ for (const locale of ['en', 'ar']) {
     findings.push(`${locale}: nothing is playing — the films are meant to run inside the strip`);
 
   // ── WCAG 2.2.2: it must be stoppable ─────────────────────────────────────
-  const toggle = page.locator('[data-film-marquee] button');
+  // By attribute, not by tag: the tiles are buttons too now, and so are the
+  // viewer's controls.
+  const toggle = page.locator('[data-marquee-toggle]');
   const hasToggle = (await toggle.count()) === 1;
   note(`pause control present: ${hasToggle}`);
   if (!hasToggle)
@@ -282,6 +284,74 @@ for (const locale of ['en', 'ar']) {
   note(`hover: moved ${hoverMoved.toFixed(2)}px`);
   if (hoverMoved > 1) findings.push(`${locale}: hovering does not pause the strip`);
   await page.mouse.move(0, 0);
+
+  // ── Tiles are controls, and only the announced copy is reachable ─────────
+  const controls = await page.evaluate(
+    ([vpSel]) => {
+      const vp = document.querySelector(vpSel);
+      const groups = [...vp.querySelectorAll(':scope > div > ul')];
+      const focusable = groups.map((g) => ({
+        hidden: g.getAttribute('aria-hidden') === 'true',
+        inert: g.hasAttribute('inert'),
+        buttons: g.querySelectorAll('button').length,
+      }));
+      return {
+        groups: focusable,
+        // A focusable control inside aria-hidden is the defect: tab order walks into
+        // something a screen reader has been told is not there.
+        reachableHidden: focusable.filter((g) => g.hidden && !g.inert && g.buttons > 0).length,
+        leadButtons: focusable[0]?.buttons ?? 0,
+      };
+    },
+    [viewport]
+  );
+  note(
+    `tile buttons: ${controls.leadButtons} in the announced copy; ${controls.groups.length} copies, hidden ones inert: ${controls.groups.filter((g) => g.hidden && g.inert).length}`
+  );
+  if (controls.leadButtons === 0) findings.push(`${locale}: tiles are not focusable controls`);
+  if (controls.reachableHidden > 0)
+    findings.push(
+      `${locale}: ${controls.reachableHidden} aria-hidden copy/copies still hold focusable buttons`
+    );
+
+  // ── The expanded film ────────────────────────────────────────────────────
+  await page.evaluate((sel) => document.querySelector(sel + ' li button')?.click(), viewport);
+  await page.waitForTimeout(900);
+  const opened = await page.evaluate(() => {
+    const dialog = document.querySelector('dialog');
+    return {
+      open: dialog?.open ?? false,
+      modal: dialog?.matches(':modal') ?? false,
+      videos: dialog ? dialog.querySelectorAll('video').length : 0,
+      stripPlaying: [...document.querySelectorAll('[data-marquee-track] video')].filter(
+        (v) => !v.paused
+      ).length,
+      counter: dialog?.querySelector('p')?.textContent?.trim() ?? null,
+    };
+  });
+  note(
+    `expanded: open=${opened.open} modal=${opened.modal} videos=${opened.videos} counter="${opened.counter}" strip still playing=${opened.stripPlaying}`
+  );
+  if (!opened.open) findings.push(`${locale}: clicking a tile did not open the expanded film`);
+  if (!opened.modal)
+    findings.push(`${locale}: the viewer is not a modal dialog — focus can leave it`);
+  if (opened.videos !== 1)
+    findings.push(`${locale}: the viewer mounted ${opened.videos} videos, expected 1`);
+  if (opened.stripPlaying > 0)
+    findings.push(
+      `${locale}: ${opened.stripPlaying} strip clips kept decoding behind the open viewer`
+    );
+
+  const stoppedBehind = await sample();
+  await page.waitForTimeout(900);
+  if (Math.abs((await sample()) - stoppedBehind) > 1)
+    findings.push(`${locale}: the strip keeps travelling behind the open viewer`);
+
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(600);
+  const closed = await page.evaluate(() => document.querySelector('dialog')?.open ?? false);
+  note(`Escape closes: ${!closed}`);
+  if (closed) findings.push(`${locale}: Escape did not close the viewer`);
 
   // ── The gutter bleed must not become page overflow ───────────────────────
   for (const width of [2560, 1440, 390, 320]) {

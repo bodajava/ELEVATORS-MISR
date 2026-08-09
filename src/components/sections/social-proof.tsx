@@ -37,7 +37,14 @@ export function SocialProof({ locale }: { locale: Locale }) {
           lede={socialProof.lede[locale]}
         />
 
-        <ul className="mt-12 grid grid-cols-2 items-start gap-5 sm:gap-7 lg:grid-cols-4">
+        {/* A contact sheet, not a matrix: each frame keeps its own aspect ratio and the row
+            hangs from a shared top line, so the bottom edge is deliberately ragged. Marked so
+            the grid-gap detector treats it as the exception it is rather than skipping it by
+            accident — everything else on the site owes its rows a level bottom. */}
+        <ul
+          data-ragged="contact-sheet"
+          className="mt-12 grid grid-cols-2 items-start gap-5 sm:gap-7 lg:grid-cols-4"
+        >
           {images.map((image, index) => (
             <Reveal as="li" key={image.id} delay={0.05 * index}>
               <div

@@ -5,7 +5,7 @@ import type { Project } from '@/content/projects';
 import { finishLabels, settingLabels } from '@/content/projects';
 import type { Locale } from '@/i18n/config';
 import { Link } from '@/i18n/navigation';
-import { bestImageFor, imagesFor, maxImageWidth, videosFor } from '@/lib/media';
+import { bestImageFor, imagesFor, videosFor } from '@/lib/media';
 import { cn } from '@/lib/utils';
 
 /**
@@ -36,8 +36,6 @@ type Cell = {
   project: Project;
   /** Columns to span in the 6-column desktop grid. */
   span: 2 | 3 | 4 | 6;
-  /** Portrait frames keep their shape; wide cells take a landscape crop. */
-  shape: 'portrait' | 'landscape';
 };
 
 /**
@@ -59,48 +57,34 @@ type Cell = {
  * impossible rather than merely unlikely, and the only wide cells are ones that asked for it.
  */
 function planMatrix(items: Project[]): Cell[] {
-  // A repeating six-column mosaic. Each row is exactly full, and no two consecutive rows
-  // share a shape, so the eye moves diagonally instead of reading a list of equal tiles.
-  //
-  // 4+2 · 2+4 · 3+3 · 2+2+2 — every pattern sums to six.
-  const RHYTHM: Cell['span'][][] = [
-    [4, 2],
-    [2, 4],
-    [3, 3],
-    [2, 2, 2],
-  ];
+  const rows: number[][] = [];
+  let cursor = 0;
 
-  const cells: Cell[] = [];
-  let i = 0;
-  let row = 0;
-
-  while (i < items.length) {
-    const left = items.length - i;
-
-    // Close out cleanly: never start a pattern that cannot be filled.
-    let pattern: Cell['span'][];
-    if (left === 1) pattern = [6];
-    else if (left === 2) pattern = [3, 3];
-    else if (left === 3) pattern = [2, 2, 2];
-    else if (left === 4) pattern = [4, 2];
-    else if (left === 5) pattern = [3, 3];
-    else pattern = RHYTHM[row % RHYTHM.length];
-
-    for (const span of pattern) {
-      if (i >= items.length) break;
-      cells.push({
-        project: items[i],
-        span,
-        // Wide cells take a landscape crop, narrow ones keep the photograph's own portrait
-        // shape. Nothing is letterboxed and nothing leaves a gap beside it.
-        shape: span >= 4 ? 'landscape' : 'portrait',
-      });
-      i += 1;
-    }
-    row += 1;
+  // Rows of three, which is the widest a ~960px portrait source can fill without being
+  // upscaled past the point where it visibly softens.
+  while (items.length - cursor > 5) {
+    rows.push([cursor, cursor + 1, cursor + 2]);
+    cursor += 3;
   }
 
-  return cells;
+  // Close out so no row is ever left with one item. A lone tile is the orphan the old planner
+  // produced, and the wide cell it used to fill the gap with — a six-column span — cropped a
+  // portrait photograph to a letterbox and upscaled it to 1216px from a 960px source. Two
+  // rows of two is the honest way to absorb the remainder: nothing is stretched and no row
+  // is short.
+  const rest = items.length - cursor;
+  if (rest === 1) rows.push([cursor]);
+  else if (rest === 2) rows.push([cursor, cursor + 1]);
+  else if (rest === 3) rows.push([cursor, cursor + 1, cursor + 2]);
+  else if (rest === 4) rows.push([cursor, cursor + 1], [cursor + 2, cursor + 3]);
+  else if (rest === 5) rows.push([cursor, cursor + 1, cursor + 2], [cursor + 3, cursor + 4]);
+
+  // Six columns split evenly by the row's own length, so every row is exactly full.
+  const spanFor: Record<number, Cell['span']> = { 1: 6, 2: 3, 3: 2 };
+
+  return rows.flatMap((row) =>
+    row.map((index) => ({ project: items[index], span: spanFor[row.length] }))
+  );
 }
 
 const SPAN_CLASS: Record<Cell['span'], string> = {
@@ -108,6 +92,27 @@ const SPAN_CLASS: Record<Cell['span'], string> = {
   3: 'lg:col-span-3',
   4: 'lg:col-span-4',
   6: 'lg:col-span-6',
+};
+
+/**
+ * What each cell actually measures, so the browser fetches the right file.
+ *
+ * Below `lg` the grid is two columns, so a normal cell is half the viewport and a wide one is
+ * all of it. Above `lg` it is six columns, and the planner only ever emits spans of 2, 3 or 6.
+ */
+const SIZES: Record<Cell['span'], string> = {
+  2: '(min-width: 1024px) 33vw, 50vw',
+  3: '(min-width: 1024px) 50vw, 50vw',
+  4: '(min-width: 1024px) 67vw, 100vw',
+  6: '(min-width: 1024px) 100vw, 100vw',
+};
+
+/** Two columns below `lg`; only a genuinely wide cell takes the full width. */
+const NARROW_SPAN_CLASS: Record<Cell['span'], string> = {
+  2: 'col-span-1',
+  3: 'col-span-1',
+  4: 'col-span-2',
+  6: 'col-span-2',
 };
 
 export function ProjectMatrix({
@@ -122,8 +127,25 @@ export function ProjectMatrix({
   const cells = planMatrix(items);
 
   return (
-    <ul className="grid grid-cols-2 gap-x-2 gap-y-6 sm:gap-x-3 sm:gap-y-8 lg:grid-cols-6 lg:gap-x-3 lg:gap-y-10">
-      {cells.map(({ project, span, shape }, index) => {
+    // ── Fixed row height, variable cell width ─────────────────────────────────
+    // This is the whole fix for the reported gaps. Cells used to carry their own aspect
+    // ratio — `aspect-21/9` for a wide one, `aspect-3/4` for a narrow one — and a grid row
+    // takes the height of its tallest item. So a short landscape cell sitting beside a tall
+    // portrait cell left a void under itself the height of the difference, which on a 1440px
+    // screen was over 300px. Two of those per screen is what the page looked like.
+    //
+    // Giving the grid an explicit row height instead makes every cell in a row exactly as
+    // tall as its neighbours, whatever it spans. Width still varies with the span, so the
+    // mosaic rhythm survives; only the holes are gone. The height is chosen so a narrow cell
+    // stays taller than it is wide, because the photographs are portrait.
+    <ul
+      style={{ gridAutoRows: 'var(--cell-h)' }}
+      className={[
+        'grid grid-cols-2 gap-x-2 gap-y-6 sm:gap-x-3 sm:gap-y-8 lg:grid-cols-6 lg:gap-x-3 lg:gap-y-10',
+        '[--cell-h:58vw] sm:[--cell-h:40vw] lg:[--cell-h:clamp(280px,27vw,440px)]',
+      ].join(' ')}
+    >
+      {cells.map(({ project, span }, index) => {
         const image = bestImageFor(project.slug);
         // The reveal frame: the next-best still, or a film's poster. Only rendered when one
         // genuinely exists — an empty hover state is worse than none.
@@ -136,29 +158,21 @@ export function ProjectMatrix({
             as="li"
             key={project.slug}
             delay={0.04 * (index % 3)}
-            className={cn('col-span-2', SPAN_CLASS[span])}
+            stretch
+            className={cn('h-full', NARROW_SPAN_CLASS[span], SPAN_CLASS[span])}
           >
             <Link
               href={`/projects/${project.slug}`}
-              className="group/card block focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-focus"
+              className="group/card block h-full focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-focus"
             >
-              <div
-                className={cn(
-                  'aperture relative w-full overflow-hidden',
-                  shape === 'landscape' ? 'aspect-4/3 lg:aspect-21/9' : 'aspect-3/4'
-                )}
-              >
+              {/* No aspect ratio here: the row supplies the height, so a wide cell and a
+                  narrow one end level and neither can leave a gap. */}
+              <div className="aperture relative size-full overflow-hidden">
                 <Image
                   src={image.src}
                   alt={project.alt[locale]}
                   fill
-                  sizes={
-                    span === 6
-                      ? '(min-width: 1024px) 100vw, 100vw'
-                      : span === 3
-                        ? '(min-width: 1024px) 50vw, 50vw'
-                        : '(min-width: 1024px) 33vw, 50vw'
-                  }
+                  sizes={SIZES[span]}
                   priority={priorityFirst && index === 0}
                   className={cn(
                     'duration-slow object-cover transition-[transform,opacity] ease-travel',
@@ -166,7 +180,11 @@ export function ProjectMatrix({
                     // the generic gesture this index is explicitly not using.
                     secondary ? 'group-hover/card:opacity-0 group-focus-visible/card:opacity-0' : ''
                   )}
-                  style={{ maxWidth: maxImageWidth(image) }}
+                  /* No `maxWidth` here. `fill` places the image absolutely at inset-0, so a
+                     max-width does not stop it being drawn large — it shrinks the box and
+                     leaves a bare strip of the dark well down one side of the tile. The cell
+                     widths are capped by the planner instead, which is where the resolution
+                     limit actually belongs. */
                 />
 
                 {/* The second frame is underneath and simply becomes visible. No transform,
@@ -177,11 +195,7 @@ export function ProjectMatrix({
                     alt=""
                     aria-hidden
                     fill
-                    sizes={
-                      span === 6
-                        ? '(min-width: 1024px) 100vw, 100vw'
-                        : '(min-width: 1024px) 33vw, 50vw'
-                    }
+                    sizes={SIZES[span]}
                     className="-z-10 object-cover"
                   />
                 ) : null}

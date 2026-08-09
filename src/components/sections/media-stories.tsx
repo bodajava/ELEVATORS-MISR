@@ -3,7 +3,7 @@ import { Reveal } from '@/components/motion/reveal';
 import { Container } from '@/components/ui/container';
 import { SectionHeading } from '@/components/ui/section-heading';
 import { mediaSection } from '@/content/home';
-import { getProject } from '@/content/projects';
+import { finishLabels, getProject } from '@/content/projects';
 import { getDirection, type Locale } from '@/i18n/config';
 import { productFilms } from '@/lib/media';
 
@@ -38,7 +38,7 @@ export function MediaStories({ locale }: { locale: Locale }) {
 
   // Resolved here, on the server. The strip receives strings, never callbacks — a server
   // component cannot hand a function across the client boundary.
-  const strip: MarqueeFilm[] = films.map((film) => {
+  const strip: MarqueeFilm[] = films.map((film, index) => {
     const project = getProject(film.projectSlug);
     return {
       video: film,
@@ -48,6 +48,16 @@ export function MediaStories({ locale }: { locale: Locale }) {
           ? 'Walkthrough of a finished panorama elevator installation'
           : 'جولة داخل تركيب مصعد بانوراما منفَّذ',
       title: project ? project.title[locale] : locale === 'en' ? 'On site' : 'في الموقع',
+      // The finish, which is verified from the photograph. Where a clip is not tied to a
+      // project there is no verified finish, so the badge states what the file is instead —
+      // never an invented category.
+      badge: project ? finishLabels[project.finish][locale] : locale === 'en' ? 'Film' : 'فيلم',
+      // Facts about the file. Nothing is claimed about the project that is not already known.
+      meta: `${String(index + 1).padStart(2, '0')} · ${Math.round(film.durationSeconds)}s`,
+      expandLabel:
+        locale === 'en'
+          ? `Watch: ${project ? project.title.en : 'on site'}`
+          : `شاهد: ${project ? project.title.ar : 'في الموقع'}`,
     };
   });
 
@@ -56,8 +66,24 @@ export function MediaStories({ locale }: { locale: Locale }) {
   // directly to Client Components".
   const labels =
     locale === 'en'
-      ? { group: 'Project films', pause: 'Pause the strip', play: 'Play the strip' }
-      : { group: 'أفلام المشروعات', pause: 'إيقاف الشريط', play: 'تشغيل الشريط' };
+      ? {
+          group: 'Project films',
+          pause: 'Pause the strip',
+          play: 'Play the strip',
+          watch: 'Watch',
+          close: 'Close the film',
+          previous: 'Previous film',
+          next: 'Next film',
+        }
+      : {
+          group: 'أفلام المشروعات',
+          pause: 'إيقاف الشريط',
+          play: 'تشغيل الشريط',
+          watch: 'شاهد',
+          close: 'إغلاق الفيلم',
+          previous: 'الفيلم السابق',
+          next: 'الفيلم التالي',
+        };
 
   return (
     <section className="py-20 lg:py-28">
