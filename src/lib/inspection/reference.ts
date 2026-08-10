@@ -1,4 +1,4 @@
-import { randomInt } from 'node:crypto';
+import { randomCode, UNAMBIGUOUS_ALPHABET } from '@/lib/security/random';
 
 /**
  * Public request references.
@@ -12,22 +12,14 @@ import { randomInt } from 'node:crypto';
  *  2. **Sayable.** It gets read aloud, written on paper, and typed back. So: no lowercase,
  *     no `I/L/O/U`, no `0/1`, and a hyphen every four characters.
  *
- * Crockford's base32 alphabet minus `U`, `0` and `1` leaves 30 symbols that survive both
- * constraints. Eight of them is 30^8 ≈ 6.6 × 10^11 — at a realistic lead volume the chance
- * of any collision ever is negligible, and the repository retries on the unique constraint
- * anyway rather than trusting that arithmetic.
- *
- * `randomInt` is the CSPRNG, not `Math.random`. Modulo bias is avoided by `randomInt`'s own
- * rejection sampling.
+ * The symbol set and the CSPRNG draw both live in `@/lib/security/random` — Crockford's
+ * base32 alphabet minus `U`, `0` and `1` leaves 30 symbols that survive both constraints.
+ * Eight of them is 30^8 ≈ 6.6 × 10^11 — at a realistic lead volume the chance of any
+ * collision ever is negligible, and the repository retries on the unique constraint anyway
+ * rather than trusting that arithmetic.
  */
 
-/**
- * 30 symbols, none of them confusable when spoken or handwritten.
- *
- * Excluded and why: `O`/`0` and `I`/`L`/`1` are the classic misreadings, and `U` is dropped
- * so no reference can accidentally spell something unfortunate.
- */
-const ALPHABET = '23456789ABCDEFGHJKMNPQRSTVWXYZ';
+const ALPHABET = UNAMBIGUOUS_ALPHABET;
 
 const PREFIX = 'EE';
 const GROUPS = 2;
@@ -35,12 +27,7 @@ const GROUP_SIZE = 4;
 
 /** e.g. `EE-4K7P-2QX9`. */
 export function generateReference(): string {
-  const groups: string[] = [];
-  for (let g = 0; g < GROUPS; g++) {
-    let group = '';
-    for (let i = 0; i < GROUP_SIZE; i++) group += ALPHABET[randomInt(ALPHABET.length)];
-    groups.push(group);
-  }
+  const groups = Array.from({ length: GROUPS }, () => randomCode(GROUP_SIZE, ALPHABET));
   return [PREFIX, ...groups].join('-');
 }
 

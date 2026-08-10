@@ -1,26 +1,28 @@
 import { createHmac } from 'node:crypto';
 
 import { rateLimitSalt } from '@/lib/env';
+import type { Redis } from '@upstash/redis';
 
 /**
- * Rate limiting — one interface, one swappable implementation.
+ * Rate limiting — one interface, two implementations.
  *
- * The default is a fixed-window counter in process memory. That is the right default and the
- * wrong production answer, and it is worth being precise about which:
+ * The default is a fixed-window counter in process memory:
  *
  *  • It is correct, allocation-free and dependency-free for a single Node process — which is
- *    what `next start` on one machine is, and what the current deployment story is.
+ *    what `next start` on one machine is.
  *  • It does **not** hold across instances. On serverless or any multi-instance deployment,
  *    N instances means N × the limit, and a cold start resets the window.
  *
- * So the seam is the point. `RateLimiter` is three lines wide, `setRateLimiter()` replaces
- * the implementation for the whole app, and the call site in the server action never changes.
- * Moving to Redis/Upstash is one adapter and one call in instrumentation — see the bottom of
- * this file for the exact shape.
+ * `createRedisRateLimiter` below is the distributed alternative, backed by Upstash Redis, and
+ * `src/instrumentation.ts` installs it in place of the memory default whenever
+ * `isRedisConfigured()` is true — see that file for exactly where the swap happens. Nothing
+ * about the seam changed to support this: `RateLimiter` is three lines wide,
+ * `setRateLimiter()` replaces the implementation for the whole app, and the call sites in the
+ * server action and the concierge route never change.
  *
  * Keys are HMAC-SHA256 of the client IP under a server secret, truncated. The limiter needs
  * to tell requesters apart; it does not need to know who they are, and an IP is personal data
- * under Egypt's PDPL. Hashing means nothing here or in any future Redis holds an address.
+ * under Egypt's PDPL. Hashing means nothing here or in Redis ever holds an address.
  */
 
 export type RateLimitDecision = {
@@ -93,6 +95,41 @@ export function createMemoryRateLimiter(options: WindowOptions): RateLimiter {
   };
 }
 
+/* ─────────────────────────────── redis (upstash) ─────────────────────────── */
+
+/**
+ * A fixed-window counter held in Redis instead of process memory, so every instance behind
+ * the same deployment shares one budget per key.
+ *
+ * `INCR` + a conditional `PEXPIRE` on the first hit is the classic simple version of this
+ * pattern, not the perfectly atomic one — a Lua script (`INCR`, then `PEXPIRE` only if the
+ * resulting TTL is unset, in one round trip) closes the tiny race where two requests land on
+ * the same fresh key in the same instant and the second sees no TTL yet. That race costs at
+ * most one extra request slipping through on a brand-new window, once, which is a rounding
+ * error against the limiter's actual job — stopping a script from making thousands of
+ * attempts, not policing the exact five-per-ten-minutes boundary to the request. The simple
+ * version is what `rate-limit.ts`'s own design comment already specified; this is that.
+ */
+export function createRedisRateLimiter(redis: Redis, options: WindowOptions): RateLimiter {
+  return {
+    async check(key: string): Promise<RateLimitDecision> {
+      const count = await redis.incr(key);
+      if (count === 1) await redis.pexpire(key, options.windowMs);
+
+      if (count <= options.limit) {
+        return { ok: true, remaining: options.limit - count, retryAfterSeconds: 0 };
+      }
+
+      const ttlMs = await redis.pttl(key);
+      // `pttl` returns -1 (no expiry) or -2 (key already gone) in edge cases rather than a
+      // real millisecond count; falling back to the window length keeps the number honest —
+      // "retry after the full window" — instead of reporting a negative or zero wait.
+      const retryAfterSeconds = Math.ceil((ttlMs > 0 ? ttlMs : options.windowMs) / 1000);
+      return { ok: false, remaining: 0, retryAfterSeconds };
+    },
+  };
+}
+
 /* ──────────────────────────────── the seam ───────────────────────────────── */
 
 let limiter: RateLimiter | null = null;
@@ -145,32 +182,3 @@ export function clientAddressFrom(headers: Headers): string | null {
   }
   return headers.get('x-real-ip') ?? headers.get('cf-connecting-ip') ?? null;
 }
-
-/*
- * ── Replacing this with a shared store ──────────────────────────────────────
- *
- * Everything above is behind `RateLimiter`. A distributed version is an adapter:
- *
- *   // src/instrumentation.ts
- *   import { setRateLimiter, inspectionWindow } from '@/lib/inspection/rate-limit';
- *
- *   export async function register() {
- *     if (!process.env.REDIS_URL) return;             // keep the memory default locally
- *     const { Redis } = await import('@upstash/redis');
- *     const redis = Redis.fromEnv();
- *     setRateLimiter({
- *       async check(key) {
- *         const count = await redis.incr(key);
- *         if (count === 1) await redis.pexpire(key, inspectionWindow.windowMs);
- *         const ttl = await redis.pttl(key);
- *         return {
- *           ok: count <= inspectionWindow.limit,
- *           remaining: Math.max(0, inspectionWindow.limit - count),
- *           retryAfterSeconds: Math.max(1, Math.ceil(ttl / 1000)),
- *         };
- *       },
- *     });
- *   }
- *
- * No call site changes.
- */

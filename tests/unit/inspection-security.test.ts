@@ -1,9 +1,11 @@
+import type { Redis } from '@upstash/redis';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { MAX_FORM_AGE_MS, MIN_FILL_MS, inspectHoneypot } from '@/lib/inspection/honeypot';
 import {
   clientAddressFrom,
   createMemoryRateLimiter,
+  createRedisRateLimiter,
   getRateLimiter,
   rateLimitKey,
   resetRateLimiter,
@@ -182,6 +184,104 @@ describe('rate limiter', () => {
 
     expect(calls).toEqual(['inspection:abc']);
     expect(decision.retryAfterSeconds).toBe(42);
+  });
+});
+
+/**
+ * A minimal fake reproducing just enough of Redis's INCR/PEXPIRE/PTTL semantics for
+ * `createRedisRateLimiter` to exercise against — not a real client, and not meant to be one.
+ * The point is to prove the *adapter's* logic (the window arithmetic, the ok/refuse boundary,
+ * the retry-after calculation), which is exactly what a real Redis's atomicity guarantees sit
+ * underneath; a live-Upstash test belongs in a manual/integration check, not this suite.
+ */
+function fakeRedis(): Redis {
+  const store = new Map<string, { value: number; expiresAt: number | null }>();
+
+  return {
+    async incr(key: string) {
+      const now = Date.now();
+      const entry = store.get(key);
+      if (!entry || (entry.expiresAt !== null && entry.expiresAt <= now)) {
+        store.set(key, { value: 1, expiresAt: null });
+        return 1;
+      }
+      entry.value += 1;
+      return entry.value;
+    },
+    async pexpire(key: string, ms: number) {
+      const entry = store.get(key);
+      if (!entry) return 0;
+      entry.expiresAt = now() + ms;
+      return 1;
+    },
+    async pttl(key: string) {
+      const entry = store.get(key);
+      if (!entry) return -2;
+      if (entry.expiresAt === null) return -1;
+      return Math.max(0, entry.expiresAt - now());
+    },
+  } as unknown as Redis;
+
+  function now() {
+    return Date.now();
+  }
+}
+
+describe('redis rate limiter', () => {
+  afterEach(() => vi.useRealTimers());
+
+  it('allows exactly the configured budget, then refuses', async () => {
+    const limiter = createRedisRateLimiter(fakeRedis(), { limit: 3, windowMs: 60_000 });
+
+    for (let i = 0; i < 3; i++) {
+      const decision = await limiter.check('key');
+      expect(decision.ok, `attempt ${i + 1}`).toBe(true);
+      expect(decision.remaining).toBe(2 - i);
+    }
+
+    const refused = await limiter.check('key');
+    expect(refused.ok).toBe(false);
+    expect(refused.remaining).toBe(0);
+    expect(refused.retryAfterSeconds).toBeGreaterThan(0);
+  });
+
+  it('keeps separate budgets per key', async () => {
+    const limiter = createRedisRateLimiter(fakeRedis(), { limit: 1, windowMs: 60_000 });
+    expect((await limiter.check('a')).ok).toBe(true);
+    expect((await limiter.check('b')).ok).toBe(true);
+    expect((await limiter.check('a')).ok).toBe(false);
+  });
+
+  it('reopens the budget once the window elapses', async () => {
+    vi.useFakeTimers();
+    const limiter = createRedisRateLimiter(fakeRedis(), { limit: 1, windowMs: 60_000 });
+
+    expect((await limiter.check('key')).ok).toBe(true);
+    expect((await limiter.check('key')).ok).toBe(false);
+
+    vi.advanceTimersByTime(60_001);
+    expect((await limiter.check('key')).ok).toBe(true);
+  });
+
+  it('reports a retry-after bounded by the window even if PTTL is stale', async () => {
+    // `pttl` returning -1/-2 is a documented edge case in the adapter's own comment — cover it
+    // directly rather than trusting the fake's normal path to always avoid it.
+    const redis = {
+      async incr() {
+        return 99;
+      },
+      async pexpire() {
+        return 0;
+      },
+      async pttl() {
+        return -1;
+      },
+    } as unknown as Redis;
+
+    const limiter = createRedisRateLimiter(redis, { limit: 5, windowMs: 10_000 });
+    const decision = await limiter.check('key');
+    expect(decision.ok).toBe(false);
+    expect(decision.retryAfterSeconds).toBe(10);
   });
 });
 

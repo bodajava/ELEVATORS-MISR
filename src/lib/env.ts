@@ -64,18 +64,44 @@ const developmentSalt = `dev-only-${Math.random().toString(36).slice(2)}`;
 export const isDatabaseConfigured = () => databaseUrl() !== null;
 
 /**
- * Lead notification — Resend.
+ * Lead notification — Gmail SMTP via Nodemailer.
  *
- * All three or none: a from-address with nowhere to send is as useless as a destination with
- * nothing configured to send from. `leadNotificationConfigured()` is the single gate every
+ * `GMAIL_USER` does double duty as both the SMTP username and the message's `From` address:
+ * Gmail's SMTP servers reject a `From` that is not the authenticated account (or one of its
+ * configured "Send As" aliases), so there is no separate from-address to configure — unlike a
+ * provider such as Resend, where any domain-verified address works. `GMAIL_APP_PASSWORD` is a
+ * 16-character App Password from the Google Account's security settings, not the account's
+ * login password — Google's SMTP no longer accepts the login password for third-party clients
+ * once 2-Step Verification is on, which it must be to generate an App Password at all.
+ *
+ * All three or none: a from-account with nowhere to send is as useless as a destination with
+ * nothing configured to send from. `isLeadNotificationConfigured()` is the single gate every
  * caller checks; the three readers below exist for the one call site that already knows the
  * gate passed, so it is not re-deriving `null` checks it has already done.
  */
-export const resendApiKey = () => read('RESEND_API_KEY');
+export const gmailUser = () => read('GMAIL_USER');
+export const gmailAppPassword = () => read('GMAIL_APP_PASSWORD');
 export const leadNotificationEmail = () => read('LEAD_NOTIFICATION_EMAIL');
-export const leadFromEmail = () => read('LEAD_FROM_EMAIL');
 
 export const isLeadNotificationConfigured = () =>
-  resendApiKey() !== null && leadNotificationEmail() !== null && leadFromEmail() !== null;
+  gmailUser() !== null && gmailAppPassword() !== null && leadNotificationEmail() !== null;
+
+/**
+ * Upstash Redis — the REST client, not a TCP connection string.
+ *
+ * `@upstash/redis` talks to Upstash over HTTPS/`fetch`, which is why it is the right client
+ * for this app rather than a TCP client like `ioredis`: a Next.js route or server action runs
+ * in a short-lived serverless invocation that cannot hold a persistent TCP socket the way a
+ * long-running Node process can, and a TCP pool sized for that model exhausts a managed Redis
+ * provider's connection limit almost immediately under real serverless concurrency. The two
+ * variables below are the **REST API** credentials specifically — found on the Upstash
+ * database's own page under "REST API", not the `redis://` connection string shown under
+ * "Connect", which is a different credential for a different client entirely.
+ */
+export const upstashRedisRestUrl = () => read('UPSTASH_REDIS_REST_URL');
+export const upstashRedisRestToken = () => read('UPSTASH_REDIS_REST_TOKEN');
+
+export const isRedisConfigured = () =>
+  upstashRedisRestUrl() !== null && upstashRedisRestToken() !== null;
 
 export const isProduction = () => process.env.NODE_ENV === 'production';

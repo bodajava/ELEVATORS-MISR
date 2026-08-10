@@ -57,7 +57,8 @@ build never needs production credentials.
 | `DATABASE_URL`                   | Persisting inspection requests         |
 | `DIRECT_URL`                     | Migrations, on PgBouncer-fronted hosts |
 | `RATE_LIMIT_SALT`                | Rate limiting (required in production) |
-| `RESEND_API_KEY`, `LEAD_*_EMAIL` | Reserved — email is not wired up yet   |
+| `GMAIL_USER`, `GMAIL_APP_PASSWORD`, `LEAD_NOTIFICATION_EMAIL` | Optional — lead notification email via Gmail SMTP |
+| `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` | Optional — distributed rate limiting across instances |
 
 Never commit a filled-in `.env`. `.gitignore` tracks `.env.example` and ignores every other
 `.env*`.

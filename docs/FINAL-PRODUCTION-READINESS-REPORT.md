@@ -19,7 +19,30 @@
 > is also now configured. Test rows written during verification were deleted from the database
 > before handoff. The rest of this report is unchanged and still describes 2026-08-08.
 
-## 1. Decision
+> **Update — 2026-08-10 (revised).** The Resend-based notification described directly above
+> was replaced, same day, with Gmail SMTP via Nodemailer — `src/lib/email/lead-notification.ts`
+> now authenticates as `GMAIL_USER`/`GMAIL_APP_PASSWORD` rather than holding a Resend API key,
+> and the message body comes from a new bilingual (English/Arabic) HTML template,
+> `src/lib/email/lead-notification-template.ts`, with a plain-text fallback. `RESEND_API_KEY`
+> and `LEAD_FROM_EMAIL` no longer exist as variables — Gmail's SMTP servers require the `From`
+> address to be the authenticated account itself, so there is no separate from-address to
+> configure. `GMAIL_APP_PASSWORD` is configured; `GMAIL_USER` and `LEAD_NOTIFICATION_EMAIL` are
+> still blank, so — as before — no notification has actually sent yet.
+>
+> Distributed rate limiting is now implemented against Upstash Redis:
+> `createRedisRateLimiter` in `rate-limit.ts`, installed by `src/instrumentation.ts` in place
+> of the in-memory default whenever `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` are
+> configured. Neither is set yet — the memory limiter, correct for the current single-instance
+> deployment, is what actually runs. Note for whoever configures this: the credential pasted
+> in chat during this session was the TCP `redis://` connection string, which this
+> integration cannot use — it needs the separate REST API URL/token from the same database's
+> Upstash console page, under "REST API". That TCP credential should be rotated regardless,
+> since it was exposed in a chat transcript.
+>
+> Also added: `src/lib/security/random.ts`, a shared CSPRNG helper module (`randomCode` for
+> human-sayable codes, `randomToken` for opaque tokens) that `reference.ts` now calls into
+> rather than duplicating, and that the new email-dedupe guard uses to generate its Redis lock
+> value. 22 new tests (161 total); `pnpm typecheck`, `pnpm lint` and `pnpm test` all pass.
 
 **NOT production ready.** Two blockers remain, both requiring credentials or a business
 decision rather than engineering work:
