@@ -22,11 +22,13 @@ export async function register() {
     await import('@/lib/inspection/rate-limit');
 
   const redis = getRedis();
-  // `isRedisConfigured()` above already confirmed the credentials exist, so `getRedis()`
-  // constructing a client rather than returning null here would only fail if the two
-  // functions disagreed with each other — worth a loud failure if it ever happens, not a
-  // silent fallback to the memory limiter that would hide a real configuration bug.
-  if (!redis) throw new Error('isRedisConfigured() was true but getRedis() returned null');
+  // `isRedisConfigured()` only confirms both variables are non-empty — not that they are a
+  // working URL and token. `getRedis()` catches that distinction itself and logs it (see its
+  // own module comment: a malformed value here previously crashed the entire server, since
+  // this function runs inside Next.js's own startup sequence). `null` at this point means
+  // that already happened and was already reported — the correct response is exactly what a
+  // deployment with no Redis configured at all gets: keep the in-process default limiter.
+  if (!redis) return;
 
   setRateLimiter(createRedisRateLimiter(redis, inspectionWindow));
 }

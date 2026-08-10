@@ -27,6 +27,7 @@ describe('provider availability', () => {
     delete process.env.CONCIERGE_PROVIDER;
     delete process.env.ANTHROPIC_API_KEY;
     delete process.env.OPENAI_API_KEY;
+    delete process.env.GOOGLE_GENERATIVE_AI_API_KEY;
     delete process.env.CONCIERGE_MODEL;
   });
   afterEach(() => {
@@ -44,11 +45,28 @@ describe('provider availability', () => {
     delete process.env.ANTHROPIC_API_KEY;
     process.env.OPENAI_API_KEY = 'test-key';
     expect(conciergeAvailability()).toMatchObject({ available: true, provider: 'openai' });
+
+    delete process.env.OPENAI_API_KEY;
+    process.env.GOOGLE_GENERATIVE_AI_API_KEY = 'test-key';
+    expect(conciergeAvailability()).toMatchObject({ available: true, provider: 'google' });
   });
 
   it('reports the missing key when a provider is named without one', () => {
     process.env.CONCIERGE_PROVIDER = 'anthropic';
     expect(conciergeAvailability()).toEqual({ available: false, reason: 'no-key' });
+
+    process.env.CONCIERGE_PROVIDER = 'google';
+    expect(conciergeAvailability()).toEqual({ available: false, reason: 'no-key' });
+  });
+
+  it('honours an explicit google provider once its key is present', () => {
+    process.env.CONCIERGE_PROVIDER = 'google';
+    process.env.GOOGLE_GENERATIVE_AI_API_KEY = 'test-key';
+    expect(conciergeAvailability()).toMatchObject({
+      available: true,
+      provider: 'google',
+      modelId: 'gemini-flash-latest',
+    });
   });
 
   it('rejects an unknown provider rather than guessing', () => {

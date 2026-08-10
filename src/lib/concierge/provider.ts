@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { createAnthropic } from '@ai-sdk/anthropic';
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createOpenAI } from '@ai-sdk/openai';
 import type { LanguageModel } from 'ai';
 
@@ -21,12 +22,20 @@ import type { LanguageModel } from 'ai';
  */
 
 export type ConciergeAvailability =
-  | { available: true; provider: 'anthropic' | 'openai'; modelId: string }
+  | { available: true; provider: 'anthropic' | 'openai' | 'google'; modelId: string }
   | { available: false; reason: 'no-provider' | 'no-key' | 'unknown-provider' };
 
 const DEFAULT_MODEL = {
   anthropic: 'claude-sonnet-4-5',
   openai: 'gpt-4.1-mini',
+  // `gemini-flash-latest`, not a dated model id. Google's own alias for "the current
+  // recommended flash-tier model" — verified against the live API (2026-08-10) after a
+  // pinned `gemini-2.5-flash` 404'd with "no longer available to new users" despite still
+  // appearing in that key's own `models.list`. An alias tracks whatever Google currently
+  // serves instead of going stale the same way; `-lite` variants exist for even cheaper but
+  // were not chosen, matching the deliberately-not-cheapest choice already made for the
+  // other two providers. Override with CONCIERGE_MODEL if a deployment needs a specific one.
+  google: 'gemini-flash-latest',
 } as const;
 
 function read(key: string): string | null {
@@ -40,6 +49,9 @@ export function conciergeAvailability(): ConciergeAvailability {
 
   if (provider === '') {
     // Infer from whichever key is present, so a single env var is enough to switch it on.
+    // Order is the order these three providers were added to the codebase, not a ranking —
+    // a deployment with more than one key set should name CONCIERGE_PROVIDER explicitly
+    // rather than depend on this order.
     if (read('ANTHROPIC_API_KEY')) {
       return {
         available: true,
@@ -52,6 +64,13 @@ export function conciergeAvailability(): ConciergeAvailability {
         available: true,
         provider: 'openai',
         modelId: read('CONCIERGE_MODEL') ?? DEFAULT_MODEL.openai,
+      };
+    }
+    if (read('GOOGLE_GENERATIVE_AI_API_KEY')) {
+      return {
+        available: true,
+        provider: 'google',
+        modelId: read('CONCIERGE_MODEL') ?? DEFAULT_MODEL.google,
       };
     }
     return { available: false, reason: 'no-provider' };
@@ -75,6 +94,15 @@ export function conciergeAvailability(): ConciergeAvailability {
     };
   }
 
+  if (provider === 'google') {
+    if (!read('GOOGLE_GENERATIVE_AI_API_KEY')) return { available: false, reason: 'no-key' };
+    return {
+      available: true,
+      provider: 'google',
+      modelId: read('CONCIERGE_MODEL') ?? DEFAULT_MODEL.google,
+    };
+  }
+
   return { available: false, reason: 'unknown-provider' };
 }
 
@@ -94,6 +122,13 @@ export function resolveModel(): LanguageModel | null {
     return anthropic(state.modelId);
   }
 
-  const openai = createOpenAI({ apiKey: read('OPENAI_API_KEY') as string });
-  return openai(state.modelId);
+  if (state.provider === 'openai') {
+    const openai = createOpenAI({ apiKey: read('OPENAI_API_KEY') as string });
+    return openai(state.modelId);
+  }
+
+  const google = createGoogleGenerativeAI({
+    apiKey: read('GOOGLE_GENERATIVE_AI_API_KEY') as string,
+  });
+  return google(state.modelId);
 }
