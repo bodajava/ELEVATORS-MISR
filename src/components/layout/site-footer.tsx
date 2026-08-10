@@ -1,5 +1,6 @@
 import { getTranslations } from 'next-intl/server';
 
+import { OpenConcierge } from '@/components/concierge/open-concierge';
 import { BrandMark } from '@/components/layout/brand-mark';
 import { DrawnRule } from '@/components/motion/drawn-rule';
 import { Magnetic } from '@/components/motion/magnetic';
@@ -65,7 +66,7 @@ export async function SiteFooter({ locale }: { locale: Locale }) {
         {/* ---- the plate ------------------------------------------------- */}
         <div className="mt-16 grid gap-14 lg:grid-cols-[1.4fr_1fr_1fr_1.1fr]">
           <div className="flex flex-col gap-7">
-            <BrandMark tone="dark" size="large" />
+            <BrandMark locale={locale} tone="dark" size="large" />
             <p className="max-w-[32ch] text-sm text-ink-2-on-dark">{t('tagline')}</p>
             <p className="max-w-[40ch] text-xs text-ink-2-on-dark">{t('noPricingNote')}</p>
             <LanguageSwitcher locale={locale} tone="dark" />
@@ -147,8 +148,11 @@ export async function SiteFooter({ locale }: { locale: Locale }) {
             <p className="font-display text-lg text-ink-on-dark">{t('conciergeHeading')}</p>
             <p className="mt-2 max-w-[52ch] text-sm text-ink-2-on-dark">{t('conciergeBody')}</p>
           </div>
+          {/* Opens the assistant rather than navigating to the inspection form. The card is
+              about the assistant; sending the visitor to a different thing under that label
+              was the mismatch this replaces. */}
           <Button asChild variant="onDark" size="md">
-            <Link href="/contact">{tCta('askConcierge')}</Link>
+            <OpenConcierge>{tCta('askConcierge')}</OpenConcierge>
           </Button>
         </div>
 

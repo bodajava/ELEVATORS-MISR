@@ -138,8 +138,11 @@ describe('the code path from folder to slider', () => {
 
   it('renders one real block and two clone blocks, and only the real one can play', () => {
     const carousel = read('src/components/media/film-carousel.tsx');
-    // Three blocks, so forward from the last and back from the first both have runway.
-    expect(carousel).toMatch(/length:\s*count\s*\*\s*3/);
+    // Three blocks, so forward from the last and back from the first both have runway. The
+    // block size is named `unit` in the component and is defined as `count`; either spelling
+    // satisfies this, because what is being asserted is the three-block structure and not the
+    // identifier the rail happens to measure it with.
+    expect(carousel).toMatch(/length:\s*(count|unit)\s*\*\s*3/);
     // Clones: hidden from accessibility, inert, and a poster rather than a player.
     expect(carousel).toMatch(/'aria-hidden':\s*true,\s*inert:\s*true/);
     expect(carousel).toMatch(/real\s*\?\s*\(\s*<AmbientVideo/);

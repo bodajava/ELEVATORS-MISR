@@ -218,6 +218,8 @@ for (const locale of ['en', 'ar']) {
     // moved. That produced "only 1 of 4 reachable" and the false RTL direction failures.
     const next = page.locator(`${RAIL} [data-carousel-arrow="next"]`);
     const seen = new Set();
+    // Per-step record, so a failure says which step went nowhere rather than only the total.
+    const trail = [];
     for (let i = 0; i < EXPECTED + 1; i += 1) {
       const visible = await page.evaluate((sel) => {
         const track = document.querySelector(sel);
@@ -229,11 +231,14 @@ for (const locale of ['en', 'ar']) {
           })
           .filter((i) => i >= 0);
       }, TRACK);
+      trail.push(visible.join('+') || '—');
       for (const index of visible) seen.add(index);
       await next.click({ timeout: 5000 }).catch(() => {});
       await page.waitForTimeout(800);
     }
-    note(`   reached slides [${[...seen].sort((a, b) => a - b).join(', ')}] with next`);
+    note(
+      `   reached slides [${[...seen].sort((a, b) => a - b).join(', ')}] with next · steps ${trail.join(' → ')}`
+    );
     if (seen.size < EXPECTED)
       findings.push(
         `${tag}: only ${seen.size} of ${EXPECTED} slides reachable with the next control`

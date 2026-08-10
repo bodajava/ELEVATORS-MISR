@@ -318,7 +318,11 @@ for (const locale of ['en', 'ar']) {
   await page.evaluate((sel) => document.querySelector(sel + ' li button')?.click(), viewport);
   await page.waitForTimeout(900);
   const opened = await page.evaluate(() => {
-    const dialog = document.querySelector('dialog');
+    // `dialog[open]`, not `dialog`. The homepage now carries two film viewers — the marketing
+    // carousel's and this strip's — and both render a closed `<dialog>` until they are used.
+    // Taking the first one in the document read the carousel's, which is never open, and
+    // reported that clicking a tile here did nothing.
+    const dialog = document.querySelector('dialog[open]');
     return {
       open: dialog?.open ?? false,
       modal: dialog?.matches(':modal') ?? false,
@@ -349,7 +353,7 @@ for (const locale of ['en', 'ar']) {
 
   await page.keyboard.press('Escape');
   await page.waitForTimeout(600);
-  const closed = await page.evaluate(() => document.querySelector('dialog')?.open ?? false);
+  const closed = await page.evaluate(() => document.querySelector('dialog[open]') !== null);
   note(`Escape closes: ${!closed}`);
   if (closed) findings.push(`${locale}: Escape did not close the viewer`);
 

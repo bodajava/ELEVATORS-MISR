@@ -48,7 +48,36 @@ for (const locale of ['en', 'ar']) {
 
       const grids = await page.evaluate((tol) => {
         const out = [];
+        /**
+         * Bento grids: coverage, not row levelling.
+         *
+         * A two-row cell beside a one-row cell shares a top edge and differs in height, which
+         * the row model below reads as a void — but there is no void, because a second cell is
+         * stacked under the short one. The honest measurement for that layout is whether the
+         * tiles fill their own bounding box. Anything the gaps do not explain is a real hole.
+         */
+        const bento = (ul) => {
+          const tiles = [...ul.children]
+            .map((li) => (li.querySelector('a > div') ?? li).getBoundingClientRect())
+            .filter((r) => r.height > 40);
+          if (tiles.length < 2) return null;
+          const box = {
+            left: Math.min(...tiles.map((r) => r.left)),
+            right: Math.max(...tiles.map((r) => r.right)),
+            top: Math.min(...tiles.map((r) => r.top)),
+            bottom: Math.max(...tiles.map((r) => r.bottom)),
+          };
+          const area = (box.right - box.left) * (box.bottom - box.top);
+          const filled = tiles.reduce((sum, r) => sum + r.width * r.height, 0);
+          return { tiles: tiles.length, coverage: area > 0 ? filled / area : 1 };
+        };
+
         for (const ul of document.querySelectorAll('ul.grid')) {
+          if (ul.dataset.ragged === 'bento') {
+            const result = bento(ul);
+            if (result) out.push({ kind: 'bento', ...result });
+            continue;
+          }
           // One documented exception: the social-proof contact sheet hangs from a shared top
           // line and is meant to be ragged. It carries the attribute so this is a declared
           // exemption rather than a hole the detector happens to miss.
@@ -88,7 +117,7 @@ for (const locale of ['en', 'ar']) {
             orphanRows: [...rows.values()].filter((r) => r.length === 1).length,
           });
         }
-        return out.filter((g) => g.tiles >= 2 && (g.worst > tol || g.tiles > 2));
+        return out.filter((g) => g.kind === 'bento' || (g.tiles >= 2 && (g.worst > tol || g.tiles > 2)));
       }, TOLERANCE);
 
       const label = `${locale} ${width}px ${route || '/'}`;
@@ -96,6 +125,18 @@ for (const locale of ['en', 'ar']) {
         note(`${label.padEnd(24)} no grid found`);
       }
       for (const g of grids) {
+        if (g.kind === 'bento') {
+          const pct = (g.coverage * 100).toFixed(1);
+          note(`${label.padEnd(24)} bento · ${g.tiles} tiles · ${pct}% of its box covered`);
+          // Gaps between cells account for a few percent. Anything past that is a hole the
+          // planner left, which is the failure this whole script exists to catch.
+          if (g.coverage < 0.9) {
+            findings.push(
+              `${label}: the bento covers only ${pct}% of its own box — a cell is missing`
+            );
+          }
+          continue;
+        }
         note(
           `${label.padEnd(24)} ${g.tiles} tiles / ${g.rows} rows · worst in-row height gap ${g.worst}px` +
             (g.worst > TOLERANCE ? `  [${g.worstRow}]` : '')

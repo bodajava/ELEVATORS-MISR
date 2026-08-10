@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { conciergeCopy } from '@/components/concierge/copy';
+import { HandoffForm, type HandoffReason } from '@/components/concierge/handoff-form';
 import type { Locale } from '@/i18n/config';
 import { MAX_MESSAGE_CHARS } from '@/lib/concierge/policy';
 import { cn } from '@/lib/utils';
@@ -36,8 +37,14 @@ export function ConciergePanel({
   onClose: () => void;
 }) {
   const t = conciergeCopy[locale];
-  const [turns, setTurns] = useState<Turn[]>([]);
+  // The assistant speaks first. A visitor never opens this onto an empty box, and the opening
+  // line is a constant rather than a generated turn: it costs nothing, it is identical every
+  // time, and no model can reword it into a promise. It is not sent to the provider either —
+  // `send` posts the visitor's turns, and this one has no bearing on the answer.
+  const [turns, setTurns] = useState<Turn[]>([{ role: 'assistant', content: t.greeting }]);
   const [draft, setDraft] = useState('');
+  /** Non-null while the in-chat human follow-up form is open, holding why it was opened. */
+  const [handoff, setHandoff] = useState<HandoffReason | null>(null);
   const [status, setStatus] = useState<
     'idle' | 'streaming' | 'error' | 'rate-limited' | 'unavailable'
   >(available ? 'idle' : 'unavailable');
@@ -51,7 +58,14 @@ export function ConciergePanel({
   }, []);
 
   useEffect(() => {
-    if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
+    const log = logRef.current;
+    if (!log) return;
+    // Opening the panel used to scroll straight to the bottom, which parked the greeting
+    // mid-sentence: it is four lines long, the box shows three, and the first thing a visitor
+    // read was "…would rather speak to a person". Before there is a conversation there is
+    // nothing below to follow, so the log stays at the top and the greeting starts at its
+    // first word. Following the latest turn only makes sense once turns are arriving.
+    log.scrollTop = turns.length > 1 ? log.scrollHeight : 0;
   }, [turns, status]);
 
   useEffect(() => () => abortRef.current?.abort(), []);
@@ -75,7 +89,9 @@ export function ConciergePanel({
       const response = await fetch('/api/concierge', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ messages: next, locale }),
+        // The greeting is interface copy, not a turn the model produced, so it is not sent
+        // back to it. Everything after it is the real conversation.
+        body: JSON.stringify({ messages: next.slice(1), locale }),
         signal: controller.signal,
       });
 
@@ -125,12 +141,32 @@ export function ConciergePanel({
           onClose();
         }
       }}
+      // Lenis smooths the *page* by cancelling wheel events on the document, and it cancels
+      // them for nested scrollers too unless it is told not to. Without this attribute the
+      // transcript below had no wheel scroll at all: it was scrollable by every measure —
+      // `overflow-y: auto`, content taller than the box — and the wheel simply scrolled the
+      // page behind it instead. `data-lenis-prevent` hands wheel events inside this panel
+      // back to the browser. Keyboard and drag scrolling were never affected, which is why
+      // the fault only ever showed up with a mouse or trackpad.
+      data-lenis-prevent
       className="fixed start-4 end-4 z-50 flex flex-col overflow-hidden rounded-(--radius-card) glass shadow-float sm:start-auto sm:w-[26rem]"
       style={{ bottom: 'calc(var(--bottom-nav-space) + 4.5rem)', maxHeight: '70vh' }}
     >
-      <div className="border-b border-rule px-5 py-4">
-        <p className="font-display text-base text-ink">{t.title}</p>
-        <p className="mt-1 text-xs text-ink-3">{t.subtitle}</p>
+      <div className="flex items-start justify-between gap-3 border-b border-rule px-5 py-4">
+        <div className="min-w-0">
+          <p className="font-display text-base text-ink">{t.title}</p>
+          <p className="mt-1 text-xs text-ink-3">{t.subtitle}</p>
+        </div>
+        {/* The route to a person, always visible and always one tap away. It is not something
+            the visitor has to know the right words for, and it does not depend on the model
+            being available — the form below works whether or not the assistant answers. */}
+        <button
+          type="button"
+          onClick={() => setHandoff('question')}
+          className="duration-fast shrink-0 rounded-(--radius-control) border border-rule px-2.5 py-1.5 text-2xs font-semibold text-ink-2 transition-colors ease-standard hover:border-accent hover:text-accent-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+        >
+          {t.human}
+        </button>
       </div>
 
       {/* Polite, so a screen reader hears the reply without the stream interrupting on every
@@ -142,22 +178,6 @@ export function ConciergePanel({
         aria-relevant="additions text"
         className="flex-1 overflow-y-auto px-5 py-4"
       >
-        {turns.length === 0 && !notice ? (
-          <ul className="flex flex-col gap-2">
-            {t.suggestions.map((question) => (
-              <li key={question}>
-                <button
-                  type="button"
-                  onClick={() => void send(question)}
-                  className="duration-fast w-full rounded-(--radius-control) border border-rule px-3 py-2.5 text-start text-sm text-ink-2 transition-colors ease-standard hover:border-ink-3 hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-                >
-                  {question}
-                </button>
-              </li>
-            ))}
-          </ul>
-        ) : null}
-
         <ul className="flex flex-col gap-4">
           {turns.map((turn, index) => (
             <li
@@ -178,20 +198,72 @@ export function ConciergePanel({
           ))}
         </ul>
 
-        {notice ? (
+        {/* Openers. Shown only while the greeting is the whole conversation, and they include
+            the two things a visitor most often arrives with that are not questions about
+            elevators: working hours, and a complaint. */}
+        {turns.length === 1 && handoff === null ? (
+          <ul className="mt-4 flex flex-wrap gap-1.5">
+            {/* Openers exist only when there is something to answer them. With no provider key
+                configured they rendered anyway at 50% opacity and did nothing when pressed —
+                four dead grey chips above a notice explaining the assistant is offline. The
+                handoff below is the path that works without a model, so it is the only one
+                offered then. */}
+            {available
+              ? t.suggestions.map((question) => (
+                  <li key={question}>
+                    <button
+                      type="button"
+                      onClick={() => void send(question)}
+                      className="duration-fast rounded-(--radius-control) border border-rule px-3 py-1.5 text-start text-xs text-ink-2 transition-colors ease-standard hover:border-ink-3 hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                    >
+                      {question}
+                    </button>
+                  </li>
+                ))
+              : null}
+            <li>
+              <button
+                type="button"
+                onClick={() => setHandoff('complaint')}
+                className="duration-fast rounded-(--radius-control) border border-accent/50 px-3 py-1.5 text-start text-xs font-semibold text-accent-text transition-colors ease-standard hover:bg-accent hover:text-on-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+              >
+                {t.complaint}
+              </button>
+            </li>
+          </ul>
+        ) : null}
+
+        {/* The handoff, inline. Not a redirect, not a link, not a phone number — the form
+            appears in the conversation where it was asked for. */}
+        {handoff ? (
+          <div className="mt-4">
+            <HandoffForm
+              locale={locale}
+              reason={handoff}
+              context={[...turns].reverse().find((turn) => turn.role === 'user')?.content}
+              onCancel={() => setHandoff(null)}
+            />
+          </div>
+        ) : null}
+
+        {notice && handoff === null ? (
           <div className="mt-3 rounded-(--radius-control) border border-rule bg-paper-raised px-3.5 py-3 text-sm text-ink-2">
             <p>{notice}</p>
-            <a
-              href={`/${locale}/contact`}
-              className="mt-2 inline-block text-sm font-semibold text-accent-text underline underline-offset-4"
+            <button
+              type="button"
+              onClick={() => setHandoff('question')}
+              className="duration-fast mt-2 text-sm font-semibold text-accent-text underline underline-offset-4 transition-colors ease-standard hover:text-ink"
             >
-              {t.cta}
-            </a>
+              {t.human}
+            </button>
           </div>
         ) : null}
       </div>
 
+      {/* The composer stands down while the handoff form is open. Two inputs competing for the
+          same Enter key, in a panel this size, is a way to lose what you typed. */}
       <form
+        hidden={handoff !== null}
         onSubmit={(event) => {
           event.preventDefault();
           void send(draft);

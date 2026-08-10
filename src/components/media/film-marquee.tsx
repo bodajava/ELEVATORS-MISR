@@ -67,8 +67,12 @@ export function FilmMarquee({
   films,
   dir,
   labels,
-  /** Travel speed in CSS pixels per second. Slow enough to read a caption in passing. */
-  speed = 45,
+  /**
+   * Travel speed in CSS pixels per second. Fast enough to read as a moving band rather than a
+   * stalled row, slow enough that a caption is still legible on the way past. Hover, focus and
+   * the toggle all stop it, so nobody has to chase a frame at this speed.
+   */
+  speed = 68,
   className,
 }: {
   films: MarqueeFilm[];
@@ -153,25 +157,46 @@ export function FilmMarquee({
 
   return (
     <div className={cn('relative', className)} data-film-marquee>
-      {/* The clip. Static, and deliberately a separate element from the thing that moves.
-          With the animation on the overflow-hidden box itself, the clipping window travels
-          with the content: the band drains from its trailing edge and leaves a growing empty
-          strip until the loop restarts. Measured, that hole reached 188px before the seam. */}
+      {/* ── The cloud ──────────────────────────────────────────────────────────
+          A soft blurred halo sitting behind the trough, in the same brass and terracotta the
+          ambient field uses. It is what stops the band reading as a rectangle pasted onto the
+          page: the light spills past the glass edge before the page resumes. Purely a
+          background paint — no filter is animated, so it costs one composite. */}
       <div
-        data-marquee-viewport
-        role="group"
-        aria-label={labels.group}
-        style={{ ['--film-h' as string]: 'clamp(180px, 26vh, 280px)' }}
-        className={[
-          'group overflow-hidden',
-          // The strip bleeds past the gutter so it reads as a band crossing the page rather
-          // than a component sitting inside a column.
-          '-mx-(--gutter) px-(--gutter)',
-          // Reduced motion: no travel, and the band becomes a plain scrollable strip so the
-          // same films are still reachable by hand.
-          'motion-reduce:snap-x motion-reduce:scrollbar-none motion-reduce:overflow-x-auto',
-        ].join(' ')}
-      >
+        aria-hidden
+        className="pointer-events-none absolute -inset-x-4 -inset-y-8 -z-10 rounded-[3rem] blur-[52px] sm:-inset-x-8"
+        style={{
+          background:
+            'radial-gradient(60% 70% at 20% 40%, color-mix(in oklab, var(--color-accent) 22%, transparent), transparent 70%), radial-gradient(55% 70% at 82% 60%, color-mix(in oklab, #c9a227 20%, transparent), transparent 72%)',
+        }}
+      />
+
+      {/* ── The trough ─────────────────────────────────────────────────────────
+          Liquid glass around the footage: the blurred, tinted, hairline-edged surface the rest
+          of the site uses for floating panels, here as a channel the strip runs through. */}
+      <div className="glass relative overflow-hidden rounded-[2rem] p-3 sm:p-4">
+        {/* The clip. Static, and deliberately a separate element from the thing that moves.
+            With the animation on the overflow-hidden box itself, the clipping window travels
+            with the content: the band drains from its trailing edge and leaves a growing empty
+            strip until the loop restarts. Measured, that hole reached 188px before the seam. */}
+        <div
+          data-marquee-viewport
+          role="group"
+          aria-label={labels.group}
+          style={{
+            ['--film-h' as string]: 'clamp(180px, 26vh, 280px)',
+            // The footage dissolves into the glass at both ends instead of being guillotined
+            // by the trough edge. Logical-agnostic: it is symmetric, so RTL needs nothing.
+            maskImage:
+              'linear-gradient(to right, transparent, #000 4.5rem, #000 calc(100% - 4.5rem), transparent)',
+          }}
+          className={[
+            'group overflow-hidden rounded-[1.4rem]',
+            // Reduced motion: no travel, and the band becomes a plain scrollable strip so the
+            // same films are still reachable by hand.
+            'motion-reduce:snap-x motion-reduce:scrollbar-none motion-reduce:overflow-x-auto',
+          ].join(' ')}
+        >
         <div
           ref={trackRef}
           data-marquee-track
@@ -254,6 +279,7 @@ export function FilmMarquee({
               ))}
             </ul>
           ))}
+        </div>
         </div>
       </div>
 

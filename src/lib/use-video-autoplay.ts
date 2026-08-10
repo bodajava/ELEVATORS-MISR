@@ -37,7 +37,18 @@ export function useVideoAutoplay({
    * become active should already have its source.
    */
   active = true,
-}: { enabled?: boolean; active?: boolean } = {}) {
+  /**
+   * The visitor has asked for sound on this clip.
+   *
+   * Without this the observer below re-asserted `muted = true` every time it re-fired — which
+   * it does on any re-entry, and in the film rail on every hover, since `active` is a
+   * dependency. The control said "sound on" while the element was silently muted underneath
+   * it, and no amount of clicking could make it play. Once sound is deliberately on, the
+   * autoplay path stops touching `muted` and only starts playback the visitor can already see
+   * they asked for.
+   */
+  allowSound = false,
+}: { enabled?: boolean; active?: boolean; allowSound?: boolean } = {}) {
   const ref = useRef<HTMLVideoElement>(null);
   /** True once the source has been attached, so the component can render <source>. */
   const [armed, setArmed] = useState(false);
@@ -73,8 +84,9 @@ export function useVideoAutoplay({
       ([entry]) => {
         if (entry.isIntersecting && active && !reduced.matches) {
           // Belt and braces: the element is muted in markup, but a stale `muted = false` from
-          // a previous unmute must never survive into an autoplay.
-          el.muted = true;
+          // a previous unmute must never survive into an autoplay — unless the visitor is the
+          // one who asked for sound on this clip, which is what `allowSound` records.
+          if (!allowSound) el.muted = true;
           void el.play().catch(() => {
             // Rejected autoplay is not an error condition — the poster is the fallback.
           });
@@ -96,7 +108,7 @@ export function useVideoAutoplay({
       el.removeEventListener('play', onPlay);
       el.removeEventListener('pause', onPause);
     };
-  }, [enabled, armed, active]);
+  }, [enabled, armed, active, allowSound]);
 
   return { ref, armed, playing, setArmed };
 }

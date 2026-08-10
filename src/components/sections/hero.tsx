@@ -67,6 +67,24 @@ import type { HeroAsset } from '@/lib/media';
 export function Hero({ locale, heroAsset }: { locale: Locale; heroAsset: HeroAsset | null }) {
   const scope = useRef<HTMLElement>(null);
 
+  /**
+   * The wordmark, in the locale's own script.
+   *
+   * The two halves are not styled identically across locales, and cannot be. The Latin lockup
+   * is set in Bricolage at 19vw with heavy tracking-in and a 0.78 leading, all of which are
+   * wrong for Arabic: Alexandria is a connected script that breaks under negative tracking,
+   * ships no weight above 600 here (see `src/lib/fonts.ts`), and needs real leading or its
+   * ascenders are sliced by the `overflow-clip` wrapper. It is also a longer string — «العربية
+   * للمصاعد» is fifteen characters against "Elevators"' nine — so it is set smaller to span
+   * the same measure rather than run off both edges.
+   */
+  const [word1, word2] = hero.wordmark[locale];
+  const arabic = locale === 'ar';
+  const dir = arabic ? 'rtl' : 'ltr';
+  const wordClass = arabic
+    ? 'block font-display text-[12.5vw] leading-[1.12] font-semibold text-ink lg:text-[11.5vw]'
+    : 'block font-display text-[19vw] leading-[0.78] font-extrabold tracking-[-0.06em] text-ink uppercase lg:text-[17.5vw]';
+
   useGSAP(
     () => {
       const root = scope.current;
@@ -138,8 +156,39 @@ export function Hero({ locale, heroAsset }: { locale: Locale; heroAsset: HeroAss
           // Function-based so a resize recomputes it via invalidateOnRefresh rather than
           // freezing the ratio measured at first paint.
           const startScale = () => {
-            const finalW = film.offsetWidth || 1;
-            const openW = desktop ? openingWidth() : Math.min(window.innerWidth * 0.66, 280);
+            // Computed, not measured.
+            //
+            // This read `film.offsetWidth || 1`, and the fallback was not harmless. When the
+            // set below runs before the element has been laid out, `offsetWidth` is 0, the
+            // divisor became 1, `openW / 1` was far above 1, and the clamp returned **1** —
+            // an opening scale of exactly full size, with no growth left in the sequence.
+            // Whether that happened was a race: the same viewport gave 0.937 on one locale
+            // and 1 on the other, because one settled its layout before the set and the
+            // other did not. `invalidateOnRefresh` could not recover it either, since the
+            // timeline records its start value from whatever the element is showing.
+            //
+            // The final width is not something that has to be measured — the element is
+            // `calc(100vw - 2rem)`, so it is `innerWidth - 32` by construction. Deriving it
+            // removes the race entirely and reproduces the desktop scale exactly (0.409 at
+            // 1440, the value the hero harness records).
+            const GUTTER_PX = 32;
+            const finalW = window.innerWidth - GUTTER_PX;
+            // On a phone the opening frame was `min(66vw, 280px)` against a 2.6:1 ratio,
+            // which produced a 257x99 stamp sitting in the middle of an otherwise empty
+            // 844px screen — the first thing a visitor saw was mostly nothing. The phone
+            // frame now opens near the full gutter width, and the ratio it opens at is
+            // taller (see `aspect-3/2` on the element), so the opening composition has
+            // something in it.
+            //
+            // Capped by height as well as width, because a phone is not only narrow. At
+            // 320x568 an 86%-of-width frame is 275x183, and 183px of a 568px screen that
+            // already owes space to a header, a wordmark, a headline, two buttons and a
+            // bottom bar is more than there is. The second term keeps the opening frame
+            // under 40% of the viewport's height; on a normal phone the width term is
+            // smaller and this never binds.
+            const openW = desktop
+              ? openingWidth()
+              : Math.min(window.innerWidth * 0.86, window.innerHeight * 0.3 * (3 / 2));
             // finalW is now the full page width, so the opening scale is derived from it
             // rather than from a clamp — the frame still opens at ~40vw between the lines.
             return gsap.utils.clamp(0.2, 1, openW / finalW);
@@ -154,8 +203,28 @@ export function Hero({ locale, heroAsset }: { locale: Locale; heroAsset: HeroAss
           //
           // The descent must also exceed half the growth, or the frame's top edge stays put
           // and the motion reads as "expanding downward" rather than "travelling down".
-          const fromY = () => -window.innerHeight * (desktop ? 0.15 : 0.09);
-          const toY = () => window.innerHeight * (desktop ? 0.145 : 0.1);
+          // The resting offset is measured against the seam between the two words, not chosen
+          // by eye. At -0.15vh the frame sat almost entirely above that seam, which put it
+          // behind the first word (z-30) with only a sliver showing above the capitals — the
+          // film was in the composition but you could not see it. Sitting across the seam is
+          // what the weave is for: the first word crosses its top, the second passes behind
+          // its bottom, and both stay readable.
+          //
+          // Arabic rests higher, and that is a property of the script rather than a taste
+          // call. Latin capitals are vertical stems with open counters, so a frame crossing
+          // their tops leaves them perfectly readable. Alexandria's letters are joined along a
+          // horizontal spine, and an edge landing in the middle of «العربية للمصاعد» cuts the
+          // joins and breaks the word in two. The Arabic lockup is also set smaller, so the
+          // same offset eats a much larger share of it. It sits higher instead, where the
+          // short first word — «مصر», a third the width of the frame — hides very little.
+          const rest = arabic ? (desktop ? 0.085 : 0.06) : desktop ? 0.02 : 0.015;
+          const fromY = () => -window.innerHeight * rest;
+          // The descent still has to exceed half the frame's growth in height, or the top edge
+          // stays put and the move reads as "expanding downward" rather than travelling. The
+          // start is ~130px lower than it was, so the destination goes as far down as the
+          // viewport still allows: at 1440x900 the settled frame is 542px tall, which leaves
+          // room for it to land with its bottom edge just inside the fold and no further.
+          const toY = () => window.innerHeight * (desktop ? 0.215 : 0.16);
 
           /* ---- the opening composition, fully visible ---------------------
              Everything a visitor needs in order to understand the page is on screen at
@@ -255,7 +324,9 @@ export function Hero({ locale, heroAsset }: { locale: Locale; heroAsset: HeroAss
         releaseSequence('hero');
       };
     },
-    { scope }
+    // `arabic` changes the resting offset below, so it is a real dependency of the timeline
+    // rather than a value read once at mount.
+    { scope, dependencies: [arabic] }
   );
 
   return (
@@ -265,7 +336,19 @@ export function Hero({ locale, heroAsset }: { locale: Locale; heroAsset: HeroAss
         // Deliberately NOT `overflow-clip`: the video grows past the type and a clipped
         // stage would slice it. The instrument layer and words are inset enough that
         // nothing else needs clipping here.
-        className="relative flex h-svh flex-col justify-between px-(--gutter) pt-24 pb-7 lg:pt-28 lg:pb-8"
+        // `pb` on a phone clears the floating bottom bar as well as the page edge — the spec
+        // rail is the last thing in this stage and it was sitting directly under the bar.
+        // (The floating concierge launcher, which also lives in this corner, is handled
+        // separately in `concierge.tsx` — it defers its own entrance rather than this stage
+        // reserving space for it, because padding *after* the last flex item cannot move an
+        // *earlier* one, which is what the CTA row is.)
+        // `min-h-svh`, not `h-svh`. Locked to exactly one viewport, a short screen (a 568px
+        // iPhone SE, or any phone in landscape) had to fit the eyebrow, the wordmark, the
+        // film, a two-line headline, two calls to action and the spec rail into ~415px of
+        // usable height — so they overlapped each other instead. The stage now grows past
+        // the fold on the screens that need it and is exactly one viewport everywhere else,
+        // which is what it always was on the sizes it was designed against.
+        className="relative flex min-h-svh flex-col justify-between px-(--gutter) pt-20 pb-[calc(var(--bottom-nav-space)+0.75rem)] lg:pt-28 lg:pb-8"
       >
         <HeroInstruments locale={locale} />
 
@@ -282,16 +365,20 @@ export function Hero({ locale, heroAsset }: { locale: Locale; heroAsset: HeroAss
 
         {/* ---- the woven composition ------------------------------------- */}
         {/* One stacking context, three siblings, explicit z-order. */}
-        <div className="relative flex flex-1 flex-col items-center justify-center">
-          {/* EGYPT — in front of the video */}
+        {/* The film is absolutely positioned, so it contributes no height and this band was
+            free to collapse to the height of the two words — about 95px. On a 568px or 667px
+            phone that is exactly what happened: the band shrank, the film kept its own size,
+            and it overlapped the eyebrow above and the headline below. The floor below is the
+            film's own height expressed in the same terms the opening scale uses (86% of the
+            width at 3:2 → 57vw tall, capped at 30svh), plus slack for the tilt. On a phone
+            with room it is already smaller than the band and changes nothing; on a short one
+            it makes the stage grow past the fold instead of stacking things on top of each
+            other. `lg` opts out — the desktop stage is never short of height. */}
+        <div className="relative flex min-h-[calc(max(57vw,30svh)+2rem)] flex-1 flex-col items-center justify-center lg:min-h-0">
+          {/* First word — in front of the video */}
           <span aria-hidden className="relative z-30 block overflow-clip">
-            <span
-              data-hero-word-1
-              lang="en"
-              dir="ltr"
-              className="block font-display text-[19vw] leading-[0.78] font-extrabold tracking-[-0.06em] text-ink uppercase lg:text-[17.5vw]"
-            >
-              Egypt
+            <span data-hero-word-1 lang={locale} dir={dir} className={wordClass}>
+              {word1}
             </span>
           </span>
 
@@ -301,26 +388,44 @@ export function Hero({ locale, heroAsset }: { locale: Locale; heroAsset: HeroAss
             // No `-translate-x-1/2 -translate-y-1/2` here: GSAP owns this element's transform
             // and writes `translate: none`, so those utilities were being discarded. Centring
             // is applied as `xPercent/yPercent` in the timeline instead — see CENTRE above.
-            className="absolute top-1/2 left-1/2 z-20 w-[calc(100vw-2rem)] overflow-hidden will-change-transform"
-            // 2.6:1. Wider than anamorphic, and the ratio is doing a specific job: at the
+            // The ratio is a breakpoint decision, not one number.
+            //
+            // 2.6:1 from `lg`. Wider than anamorphic, and it is doing a specific job: at the
             // full page width the frame has to stay short enough to travel a visible distance
             // down the viewport *and* still land inside it. At 2.35 the settled frame was
             // 599px tall at 1440x900 and the descent had nowhere to go — the motion collapsed
             // back into "grows in place", which is the thing being corrected.
-            style={{ aspectRatio: '2.6 / 1' }}
+            //
+            // On a phone that same ratio produced a 358x138 letterbox: a 16% band across an
+            // 844px screen, with the rest of the first view empty. A landscape clip needs
+            // height to read at all at 390px, so the phone gets 3:2 — 358x239, which is a
+            // frame a visitor can actually see something in.
+            className="absolute top-1/2 left-1/2 z-20 aspect-3/2 w-[calc(100vw-2rem)] overflow-hidden will-change-transform lg:aspect-[2.6/1]"
           >
             {heroAsset ? <HeroVideo hero={heroAsset} /> : null}
+
+            {/* Phone-only scrim. Below `lg` the wordmark sits on top of the footage rather
+                than woven through it, and this clip is bright — sunlit glass and a white
+                wall. Ink type over that measured under 3:1 across the brightest thirds. A
+                wash of the page's own colour lifts it back without tinting the film or
+                introducing a colour the system does not already use. It is `lg:hidden`
+                because on a wide screen the type is not over the frame at all. */}
+            <span
+              aria-hidden
+              className="pointer-events-none absolute inset-0 z-1 bg-paper/45 lg:hidden"
+            />
           </div>
 
-          {/* ELEVATORS — behind the video */}
-          <span aria-hidden className="relative z-10 block overflow-clip">
-            <span
-              data-hero-word-2
-              lang="en"
-              dir="ltr"
-              className="block font-display text-[19vw] leading-[0.78] font-extrabold tracking-[-0.06em] text-ink uppercase lg:text-[17.5vw]"
-            >
-              Elevators
+          {/* Second word — behind the video on a wide screen, in front of it on a phone.
+              The weave needs the wordmark to be bigger than the frame it is woven through.
+              That holds at 1440, where "ELEVATORS" is 1120px against a 596px frame; it does
+              not hold at 390, where the phone frame is 374x263 and the two words together
+              are 116px tall — the frame simply swallowed the second word and the brand name
+              read as "EGYPT". Below `lg` the composition is the wordmark over the film
+              instead, which is legible at that size and still one image and one name. */}
+          <span aria-hidden className="relative z-30 block overflow-clip lg:z-10">
+            <span data-hero-word-2 lang={locale} dir={dir} className={wordClass}>
+              {word2}
             </span>
           </span>
         </div>

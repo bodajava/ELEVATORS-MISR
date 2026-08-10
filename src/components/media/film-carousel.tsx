@@ -80,6 +80,7 @@ export function FilmCarousel({
   interval?: number;
   className?: string;
 }) {
+  const rootRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLUListElement>(null);
   const [active, setActive] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -92,9 +93,12 @@ export function FilmCarousel({
   const rtl = dir === 'rtl';
   const count = films.length;
 
+  /** Slides in one block. One pass of the set; the rail is capped to fit inside it. */
+  const unit = count;
+
   /** Sign of `scrollLeft` in this browser under this direction. Probed, not assumed. */
   const signRef = useRef(1);
-  /** Width of one block of `count` slides, gaps included. */
+  /** Width of one block of `unit` slides, gaps included. */
   const blockRef = useRef(0);
 
   const getPos = useCallback(() => {
@@ -131,11 +135,11 @@ export function FilmCarousel({
 
     const measure = () => {
       const cards = [...track.children] as HTMLElement[];
-      if (cards.length < count * 2 + 1) return;
+      if (cards.length < unit * 2 + 1) return;
       // First real card to first trailing-clone card. Derived by subtraction rather than read
       // from `columnGap`, so it stays correct if the gap becomes responsive.
-      const first = cards[count].getBoundingClientRect().left;
-      const after = cards[count * 2].getBoundingClientRect().left;
+      const first = cards[unit].getBoundingClientRect().left;
+      const after = cards[unit * 2].getBoundingClientRect().left;
       const block = Math.abs(after - first);
       if (block <= 0) return;
 
@@ -145,6 +149,20 @@ export function FilmCarousel({
       // read as "next does nothing".
       const previous = blockRef.current;
       blockRef.current = block;
+
+      // How wide the rail is allowed to be, published to CSS as one block's width.
+      //
+      // The brief asks for a rail at 80% of its container; the loop imposes a harder limit on
+      // top of that. Three blocks have to supply runway either side of the real one, so the
+      // rail may never be wider than a single block — past that it walks into the end of its
+      // own scroll range and wedges, which is what "next does nothing" looked like at 768px.
+      // The classes below combine the two: never wider than a block anywhere, and 80% of the
+      // container from `lg`, whichever is smaller.
+      //
+      // Written on the root rather than the track, so the controls below can align to exactly
+      // the same edges as the rail they drive.
+      rootRef.current?.style.setProperty('--rail-max', `${Math.floor(block)}px`);
+
       if (Math.abs(block - previous) > 1) park(block);
     };
 
@@ -152,7 +170,7 @@ export function FilmCarousel({
     const observer = new ResizeObserver(measure);
     observer.observe(track);
     return () => observer.disconnect();
-  }, [count, setPos]);
+  }, [count, unit, setPos]);
 
   /* Read the active index back, and teleport out of the clone blocks. */
   useEffect(() => {
@@ -167,7 +185,7 @@ export function FilmCarousel({
       raf = 0;
       const block = blockRef.current;
       if (block <= 0) return;
-      const stride = block / count;
+      const stride = block / unit;
       const index = Math.round((getPos() - block) / stride);
       setActive(((index % count) + count) % count);
     };
@@ -185,8 +203,15 @@ export function FilmCarousel({
       const block = blockRef.current;
       if (block <= 0) return;
       const pos = getPos();
-      if (pos < block * 0.5) setPos(pos + block);
-      else if (pos > block * 1.5) setPos(pos - block);
+      // The window is the real block itself — `[block, 2 × block)` — not the half-block either
+      // side of its start. With the old bounds the rail recentred as soon as it passed the
+      // block's midpoint, which is fine while a rail shows most of a block but wrong when it
+      // shows a fraction of one: at 320px the fourth film sits at 1.75 blocks, past the old
+      // 1.5 threshold, so stepping to it teleported straight back to the first and the last
+      // film was unreachable. Correcting on the block's real edges keeps a full block of
+      // runway on both sides, which is all the loop needs.
+      if (pos < block - 1) setPos(pos + block);
+      else if (pos > block * 2 - 1) setPos(pos - block);
     };
 
     const onScroll = () => {
@@ -202,7 +227,7 @@ export function FilmCarousel({
       if (raf) cancelAnimationFrame(raf);
       window.clearTimeout(settle);
     };
-  }, [count, getPos, setPos]);
+  }, [count, unit, getPos, setPos]);
 
   /* A hidden tab costs nothing. */
   useEffect(() => {
@@ -217,9 +242,9 @@ export function FilmCarousel({
       const track = trackRef.current;
       const block = blockRef.current;
       if (!track || block <= 0) return;
-      track.scrollBy({ left: (block / count) * delta * signRef.current, behavior: 'smooth' });
+      track.scrollBy({ left: (block / unit) * delta * signRef.current, behavior: 'smooth' });
     },
-    [count]
+    [unit]
   );
 
   /** Jump to one film in the real block. */
@@ -228,10 +253,10 @@ export function FilmCarousel({
       const track = trackRef.current;
       const block = blockRef.current;
       if (!track || block <= 0) return;
-      const target = block + (block / count) * index;
+      const target = block + (block / unit) * index;
       track.scrollBy({ left: (target - getPos()) * signRef.current, behavior: 'smooth' });
     },
-    [count, getPos]
+    [unit, getPos]
   );
 
   // One timer. Everything that should hold it is gathered here, so there is a single place to
@@ -255,15 +280,20 @@ export function FilmCarousel({
   if (count === 0) return null;
 
   // Three blocks: clone, real, clone. All index arithmetic is modulo `count`.
-  const rendered = Array.from({ length: count * 3 }, (_, i) => ({
+  const rendered = Array.from({ length: unit * 3 }, (_, i) => ({
     film: films[i % count],
-    real: i >= count && i < count * 2,
+    real: i >= unit && i < unit * 2,
     filmIndex: i % count,
-    key: `${i < count ? 'lead' : i < count * 2 ? 'real' : 'tail'}-${i % count}`,
+    key: `${i < unit ? 'lead' : i < unit * 2 ? 'real' : 'tail'}-${i}`,
   }));
 
   return (
-    <div className={cn('relative', className)} data-film-carousel>
+    <div
+      ref={rootRef}
+      className={cn('relative', className)}
+      data-film-carousel
+      style={{ ['--rail-max' as string]: '44rem' }}
+    >
       <ul
         ref={trackRef}
         tabIndex={0}
@@ -298,22 +328,26 @@ export function FilmCarousel({
           }
         }}
         style={{
-          // Compact by design. One shared frame height; each card is as wide as its own ratio
-          // needs, which is the only way to mix portrait and landscape without letterboxing.
-          ['--card-h' as string]: 'clamp(220px, 28vw, 340px)',
+          // One shared frame height; each card is as wide as its own ratio needs, which is the
+          // only way to mix portrait and landscape without letterboxing. Taller than it was:
+          // the rail is now a wide band rather than a compact strip, and the frame has to grow
+          // with it or four 9:16 cards could never span it.
+          // The floor is what a 320px phone gets, and it is set so that *two* cards plus the
+          // gap still fit across it: at a 260px frame only one 9:16 card fits, the peek that
+          // says the rail continues disappears, and a step the auto-advance happens to double
+          // up skips a film entirely rather than merely passing it quickly.
+          ['--card-h' as string]: 'clamp(210px, 36vw, 480px)',
         }}
         className={[
           'flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-1 sm:gap-4',
           // Bleeds past the gutter so the next card peeks — the affordance that says the rail
           // continues, without a control to say it.
           '-mx-(--gutter) scroll-px-(--gutter) px-(--gutter)',
-          // Constrained and centred from `lg`. Two reasons, and the second is not cosmetic:
-          // these are small portrait films, so a full-width rail would show six at once and
-          // stop reading as a rail at all — and the loop needs the rail to be no wider than
-          // one block plus one slide. Wider than that and three blocks cannot supply enough
-          // runway: the rail walks into the end of its own scroll range and stops dead, which
-          // is exactly what happened at 1440 before this cap.
-          'lg:mx-auto lg:max-w-[34rem] lg:scroll-px-0 lg:px-0',
+          // Never wider than one block, at any width — see the measurement above; that is the
+          // loop's hard requirement, not a style choice. From `lg` it is also held to 80% of
+          // the container, which is the width the brief asks for.
+          'mx-auto max-w-(--rail-max)',
+          'lg:max-w-[min(80%,var(--rail-max))] lg:scroll-px-0 lg:px-0',
           'scrollbar-none focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-focus',
           // The loop correction must land instantly, so no smooth behaviour from the sheet.
           'scroll-auto',
@@ -389,7 +423,13 @@ export function FilmCarousel({
                   className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-linear-to-t from-carbon/90 via-carbon/40 to-transparent"
                 />
 
-                <div className="absolute inset-x-0 bottom-0 z-10 flex items-end justify-between gap-2 p-2.5">
+                {/* `pointer-events-none` is load-bearing, not tidiness. This bar spans the
+                    card's full width and is painted *after* the player, so it sat on top of
+                    AmbientVideo's controller and swallowed every click aimed at play and
+                    sound — the sound could not be turned on at all. The bar carries no
+                    interaction of its own; the one control inside it takes its clicks back
+                    explicitly. */}
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex items-end justify-between gap-2 p-2.5">
                   <div className="min-w-0">
                     <p className="truncate font-display text-2xs text-ink-on-dark drop-shadow-[0_1px_6px_rgba(0,0,0,0.7)] sm:text-sm">
                       {film.title}
@@ -401,7 +441,7 @@ export function FilmCarousel({
                         onClick={() => setExpanded(filmIndex)}
                         onFocus={() => setPlaying(filmIndex)}
                         aria-label={film.expandLabel}
-                        className="duration-fast mt-1.5 inline-flex min-h-11 items-center rounded-(--radius-control) bg-paper/90 px-3 text-2xs font-semibold text-ink transition-colors ease-standard hover:bg-accent hover:text-on-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                        className="duration-fast pointer-events-auto mt-1.5 inline-flex min-h-11 items-center rounded-(--radius-control) bg-paper/90 px-3 text-2xs font-semibold text-ink transition-colors ease-standard hover:bg-accent hover:text-on-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
                       >
                         {labels.watch}
                       </button>
@@ -418,7 +458,9 @@ export function FilmCarousel({
         })}
       </ul>
 
-      <div className="mt-4 flex items-center justify-between gap-4">
+      {/* Aligned to the rail, not to the page. Controls sitting at the container's edges while
+          the rail sits inside them read as belonging to something else. */}
+      <div className="mx-auto mt-4 flex max-w-(--rail-max) items-center justify-between gap-4 lg:max-w-[min(80%,var(--rail-max))]">
         <div className="flex items-center">
           {films.map((film, index) => (
             <button

@@ -14,6 +14,16 @@ type Bilingual = Record<Locale, string>;
 type BilingualList = Record<Locale, string[]>;
 
 export const hero: {
+  /**
+   * The two display words the hero weaves the film between — the brand name, split in two.
+   *
+   * Locale-specific, and not a translation: the English lockup is "Egypt / Elevators" and the
+   * Arabic one is the company's real registered name, «مصر العربية للمصاعد», split so the
+   * short half sits above the film and the long half below it, exactly as the English does.
+   * It was previously hard-coded English in both locales, which left the largest type on the
+   * Arabic homepage in the wrong language and the wrong script.
+   */
+  wordmark: Record<Locale, readonly [string, string]>;
   headline: Bilingual;
   lede: Bilingual;
   ctaPrimary: Bilingual;
@@ -23,6 +33,10 @@ export const hero: {
   /** Sits under the aperture. States the pricing position plainly rather than hiding it. */
   note: Bilingual;
 } = {
+  wordmark: {
+    en: ['Egypt', 'Elevators'],
+    ar: ['مصر', 'العربية للمصاعد'],
+  },
   headline: {
     en: 'Elevating architecture through glass',
     // Not a calque. "When the elevator becomes part of the architecture."
@@ -252,12 +266,37 @@ export const socialProof: {
   eyebrow: Bilingual;
   heading: Bilingual;
   lede: Bilingual;
+  /** Shown beside the prints. Each line is a statement about the photographs themselves. */
+  notes: Record<Locale, { term: string; detail: string }[]>;
+  /** Tells the visitor the prints can be picked up. A drag nobody knows about is not a feature. */
+  hint: Bilingual;
 } = {
   eyebrow: { en: 'On site', ar: 'في الموقع' },
   heading: { en: 'Visitors to finished work', ar: 'زائرون لأعمال منفَّذة' },
   lede: {
     en: 'Photographs taken at completed installations. We do not name the people in them, and we make no claim about endorsement — the elevator is the subject.',
     ar: 'صور التُقطت في أعمال مكتملة. لا نذكر أسماء الأشخاص فيها ولا ندّعي أي رعاية أو تزكية؛ المصعد هو الموضوع.',
+  },
+  // Every line here is verifiable from the photographs and from the site's own policy. Nothing
+  // about numbers of clients, satisfaction, or who anybody is.
+  notes: {
+    en: [
+      { term: 'Where', detail: 'Inside finished installations, on handover day.' },
+      { term: 'Who', detail: 'Unnamed, by policy. No one is identified anywhere on this site.' },
+      {
+        term: 'Claim',
+        detail: 'None. A photograph is not a testimonial, and is not shown as one.',
+      },
+    ],
+    ar: [
+      { term: 'المكان', detail: 'داخل أعمال مكتملة، يوم التسليم.' },
+      { term: 'الأشخاص', detail: 'بلا أسماء، سياسةً. لا نعرّف بأحد في أي صفحة من الموقع.' },
+      { term: 'الادّعاء', detail: 'لا شيء. الصورة ليست شهادة عميل ولا تُعرض على أنها كذلك.' },
+    ],
+  },
+  hint: {
+    en: 'Pick a photograph up and move it — it finds its way back.',
+    ar: 'التقط أي صورة وحرّكها — ستعود إلى مكانها.',
   },
 };
 

@@ -22,11 +22,23 @@ export function LanguageSwitcher({
   locale,
   className,
   tone = 'light',
+  compact = false,
 }: {
   locale: Locale;
   className?: string;
   /** `dark` inverts the resting colours for use on carbon. */
   tone?: 'light' | 'dark';
+  /**
+   * One button naming the language it switches *to*, instead of both languages with the
+   * current one marked.
+   *
+   * This is the phone treatment. The full control needs about 110px, which is why it was
+   * hidden below `sm` — and hiding it meant the only way to change language on a phone was
+   * to open the hamburger first, so a visitor arriving on the wrong language had no visible
+   * way out. Two locales make the "switch to the other one" reading unambiguous, and it is
+   * a single 44px target rather than two small ones side by side.
+   */
+  compact?: boolean;
 }) {
   const t = useTranslations('language');
   const router = useRouter();
@@ -43,6 +55,32 @@ export function LanguageSwitcher({
         { locale: next }
       );
     });
+  }
+
+  if (compact) {
+    const other = locales.find((l) => l !== locale) ?? locale;
+    return (
+      <button
+        type="button"
+        lang={other}
+        onClick={() => switchTo(other)}
+        data-pending={isPending || undefined}
+        // The visible label is the target language in its own script; the accessible name
+        // says what pressing it does, because "العربية" alone is a noun, not an action.
+        aria-label={`${t('label')}: ${localeNames[other]}`}
+        className={cn(
+          'duration-fast inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-(--radius-control) px-2 transition-colors',
+          'annotation',
+          'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
+          tone === 'dark'
+            ? 'text-ink-2-on-dark hover:text-ink-on-dark'
+            : 'text-ink-3 hover:text-ink',
+          className
+        )}
+      >
+        {localeNames[other]}
+      </button>
+    );
   }
 
   return (

@@ -17,7 +17,8 @@
     "menuLabel": "القائمة الرئيسية",
     "skipToContent": "تخطَّ إلى المحتوى",
     "brandHome": "مصر العربية للمصاعد — الصفحة الرئيسية",
-    "breadcrumb": "مسار التصفح"
+    "breadcrumb": "مسار التصفح",
+    "panoramaShort": "بانوراما"
   },
   "cta": {
     "requestInspection": "اطلب معاينة الموقع",
@@ -25,7 +26,7 @@
     "exploreWork": "تصفَّح أعمالنا",
     "viewProject": "شاهد المشروع",
     "viewAllProjects": "كل المشروعات",
-    "askConcierge": "اسأل سؤالًا",
+    "askConcierge": "تحدَّث إلى خدمة العملاء",
     "backToProjects": "العودة إلى المشروعات"
   },
   "language": {

@@ -29,7 +29,12 @@ export async function Breadcrumbs({ items }: { items: Crumb[] }) {
               {item.href && !isLast ? (
                 <Link
                   href={item.href}
-                  className="rounded-xs transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+                  // `min-h-11` is the site's tap-target floor everywhere else — the footer's
+                  // nav links and the language switcher both wrap annotation-sized text the
+                  // same way. This trail was the one control left sized to its line-height
+                  // alone: 18px tall on a phone, under half the minimum.  `items-center` on
+                  // the row keeps it centred rather than pushing the visible text down.
+                  className="inline-flex min-h-11 items-center rounded-xs transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
                 >
                   {item.label}
                 </Link>

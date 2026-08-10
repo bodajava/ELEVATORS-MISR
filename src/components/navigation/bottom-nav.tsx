@@ -32,7 +32,18 @@ import { cn } from '@/lib/utils';
  * also carries a visible text label — an icon-only bar is a guessing game.
  */
 
-type Item = { key: string; href: string; icon: React.ReactNode };
+type Item = {
+  key: string;
+  href: string;
+  icon: React.ReactNode;
+  /**
+   * Label used in this bar instead of `key`, where the full navigation label is too long for
+   * a fifth of a phone screen. "Panorama Elevators" wrapped onto two lines at every iPhone
+   * width, which made this bar taller than its siblings, pushed the icons out of alignment
+   * and left the active item's label clipped. The full name still appears everywhere else.
+   */
+  labelKey?: string;
+};
 
 /* Line icons at a common 24-grid, 1.6 stroke — the same weight as the rest of the UI. */
 const stroke = {
@@ -57,6 +68,7 @@ const ITEMS: Item[] = [
   {
     key: 'panorama',
     href: '/panorama-elevators',
+    labelKey: 'panoramaShort',
     icon: (
       // A panorama car: a glass box in a shaft.
       <svg viewBox="0 0 24 24" {...stroke}>
@@ -115,6 +127,8 @@ export function BottomNav() {
     >
       <ul className="mx-auto flex max-w-md items-stretch justify-between gap-0.5 rounded-(--radius-card) glass p-1.5 shadow-float">
         {ITEMS.map((item) => {
+          // The label the bar shows, which is not always the label the route carries.
+          const label = t(item.labelKey ?? item.key);
           // `usePathname` from next-intl is already locale-stripped, so this compares real
           // routes rather than "/en/projects" against "/projects".
           const active = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);
@@ -124,8 +138,11 @@ export function BottomNav() {
               <Link
                 href={item.href}
                 aria-current={active ? 'page' : undefined}
+                // The full route name is still what assistive technology announces, even
+                // where the visible label is the shortened one.
+                aria-label={item.labelKey ? t(item.key) : undefined}
                 className={cn(
-                  'flex min-h-11 min-w-11 flex-col items-center justify-center gap-1 rounded-(--radius-control) px-1 py-1.5',
+                  'flex min-h-11 min-w-11 flex-col items-center justify-center gap-1 rounded-(--radius-control) px-0.5 py-1.5',
                   'duration-fast transition-colors ease-standard',
                   'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus',
                   active ? 'bg-ink text-paper' : 'text-ink-2 hover:text-ink'
@@ -134,8 +151,11 @@ export function BottomNav() {
                 <span aria-hidden className="block size-5 shrink-0">
                   {item.icon}
                 </span>
-                <span className="text-[0.625rem] leading-none font-medium tracking-[-0.01em]">
-                  {t(item.key)}
+                {/* One line, always. A label that wraps here changes the height of one cell
+                    and misaligns the whole bar; truncating is the lesser failure, and at
+                    320px the shortened labels above mean nothing actually truncates. */}
+                <span className="w-full truncate text-center text-[0.625rem] leading-none font-medium tracking-[-0.01em]">
+                  {label}
                 </span>
               </Link>
             </li>

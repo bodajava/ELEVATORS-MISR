@@ -17,7 +17,8 @@
     "menuLabel": "Main navigation",
     "skipToContent": "Skip to content",
     "brandHome": "Egypt Elevators — home",
-    "breadcrumb": "Breadcrumb"
+    "breadcrumb": "Breadcrumb",
+    "panoramaShort": "Panorama"
   },
   "cta": {
     "requestInspection": "Request a site inspection",
@@ -25,7 +26,7 @@
     "exploreWork": "Explore our work",
     "viewProject": "View project",
     "viewAllProjects": "View all projects",
-    "askConcierge": "Ask a question",
+    "askConcierge": "Talk to customer care",
     "backToProjects": "Back to projects"
   },
   "language": {

@@ -129,9 +129,22 @@ for (const vp of VIEWPORTS) {
     opening.film && opening.film.rect.w >= vp.width * 0.28,
     `${opening.film?.rect.w}px of ${vp.width}`
   );
+  // Below `lg` the weave itself doesn't hold — see hero.tsx's z-30/lg:z-10 comment on the
+  // bottom word. At 1440 "ELEVATORS" is 1120px against a 596px frame, wide enough to still
+  // read as text with the film crossing through it; at 390 the phone frame (358x239) is
+  // *larger* than the two-word block (116px tall combined), so weaving the second word
+  // behind it did not partially obscure the brand name, it deleted the second half of it —
+  // the page read as "EGYPT" alone until the sequence finished. Both words sit in front of
+  // the film on a phone instead, which is a different, deliberate composition rather than a
+  // failure of the desktop one.
+  const desktopZOrder = vp.width >= 1024;
   check(
-    `[${tag}] z-order is 30 / 20 / 10`,
-    opening.z.top === '30' && opening.z.film === '20' && opening.z.bottom === '10',
+    desktopZOrder
+      ? `[${tag}] z-order is 30 / 20 / 10 (word weaves through the film)`
+      : `[${tag}] z-order is 30 / 20 / 30 (both words sit in front — the film is smaller than the wordmark here)`,
+    desktopZOrder
+      ? opening.z.top === '30' && opening.z.film === '20' && opening.z.bottom === '10'
+      : opening.z.top === '30' && opening.z.film === '20' && opening.z.bottom === '30',
     JSON.stringify(opening.z)
   );
   check(`[${tag}] no horizontal overflow at paint`, opening.overflow <= 1, `${opening.overflow}px`);
@@ -244,10 +257,27 @@ for (const vp of VIEWPORTS) {
     fEnd.wordTop < f0.wordTop - 100,
     `${f0.wordTop} → ${fEnd.wordTop}`
   );
+  // Travelling down, not expanding in place.
+  //
+  // This was `fEnd.top - f0.top >= 15% of the viewport`, which measured the wrong edge. The
+  // frame grows 261px in height on the way down, and half of that growth pushes its top edge
+  // *up*, so the top's net movement is the descent minus the growth — a number that shrinks
+  // as the resting position is lowered even though the frame is travelling exactly as far.
+  // Once the film was moved down to sit between the two words (which is where the composition
+  // wants it, and where the brief asks for it), a 15%-of-viewport top travel became
+  // arithmetically impossible: the settled frame is 542px tall in a 900px viewport and there
+  // is nowhere left to land.
+  //
+  // What actually distinguishes travelling from expanding is stated in hero.tsx and measured
+  // here instead: the frame's *centre* must move further than half its own growth. Below that
+  // the top edge stays put and only the bottom extends. It is also viewport-independent, so
+  // it does not need recalibrating per breakpoint.
+  const centreTravel = fEnd.top + fEnd.height / 2 - (f0.top + f0.height / 2);
+  const halfGrowth = (fEnd.height - f0.height) / 2;
   check(
-    `[${tag}] the film travels a substantial distance down the viewport`,
-    fEnd.top - f0.top >= vp.height * 0.15,
-    `${fEnd.top - f0.top}px of ${vp.height}`
+    `[${tag}] the film travels down rather than expanding in place`,
+    centreTravel > halfGrowth * 1.25,
+    `centre +${Math.round(centreTravel)}px vs half-growth ${Math.round(halfGrowth)}px`
   );
   check(
     `[${tag}] no horizontal overflow at any stage`,

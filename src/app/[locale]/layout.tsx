@@ -105,7 +105,17 @@ export default async function LocaleLayout({
       data-scroll-behavior="smooth"
       suppressHydrationWarning
     >
-      <body className="min-h-dvh bg-paper text-ink antialiased">
+      <body
+        className="min-h-dvh bg-paper text-ink antialiased"
+        // Browser extensions write their own attributes onto <body> before React hydrates —
+        // ColorZilla adds `cz-shortcut-listen`, password managers and Grammarly add others —
+        // and React reports every one of them as a hydration mismatch it "won't patch up".
+        // Nothing here renders body attributes from client-only state, so the only source of
+        // a mismatch on this element is outside the application. Suppressing it on <body>
+        // matches what is already done on <html> for the theme script, and it is one level
+        // deep: attribute differences on children are still reported normally.
+        suppressHydrationWarning
+      >
         {/* Applies a remembered theme before any content paints. It is the first thing in the
             body rather than a hand-rolled <head>, because the App Router owns the head and a
             <script> inside the React tree triggers a hydration warning in React 19. */}

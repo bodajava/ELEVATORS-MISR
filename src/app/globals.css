@@ -264,11 +264,19 @@
      is the only way a light-follow effect is visible on paper. */
   --ambient-glow: radial-gradient(
     circle at 50% 50%,
-    color-mix(in oklab, #e5b98f 34%, transparent) 0%,
-    color-mix(in oklab, #d9a066 18%, transparent) 42%,
-    transparent 72%
+    color-mix(in oklab, #e5b98f 46%, transparent) 0%,
+    color-mix(in oklab, #d9a066 26%, transparent) 42%,
+    transparent 74%
   );
-  --ambient-glow-opacity: 0.44;
+  --ambient-glow-opacity: 0.6;
+
+  /* The lit field — a ruling that only exists under the pointer.
+     This is the light theme's half of the "the page is awake" effect, and it is
+     the half that carries it: on cream there is no headroom to add light, but a
+     hairline that was not there a second ago reads immediately. Strongest here,
+     deliberately; the dark theme keeps a trace of it so the two feel related. */
+  --ambient-grid: color-mix(in oklab, #3d3929 42%, transparent);
+  --ambient-grid-opacity: 0.5;
 
   /* The drifting forms. Brass, smoked glass, warm paper, terracotta. */
   --ambient-1: #c9a227;
@@ -326,6 +334,11 @@
   );
   --ambient-glow-opacity: 0.6;
 
+  /* The lit field, dialled back: the glow already does the work on a dark
+     ground, and a bright ruling there would read as a wireframe. */
+  --ambient-grid: color-mix(in oklab, #ede9de 22%, transparent);
+  --ambient-grid-opacity: 0.34;
+
   --ambient-1: #c9a227;
   --ambient-1-opacity: 0.16;
   --ambient-2: #8fa3ad;
@@ -382,6 +395,9 @@
       transparent 70%
     );
     --ambient-glow-opacity: 0.6;
+
+    --ambient-grid: color-mix(in oklab, #ede9de 22%, transparent);
+    --ambient-grid-opacity: 0.34;
 
     --ambient-1: #c9a227;
     --ambient-1-opacity: 0.16;
@@ -769,7 +785,8 @@
    ========================================================================== */
 [data-ambient][data-state='live'] [data-cursor-ring],
 [data-ambient][data-state='live'] [data-cursor-dot],
-[data-ambient][data-state='live'] [data-cursor-glow] {
+[data-ambient][data-state='live'] [data-cursor-glow],
+[data-ambient][data-state='live'] [data-cursor-grid] {
   display: block;
 }
 

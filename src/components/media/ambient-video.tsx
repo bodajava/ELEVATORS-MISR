@@ -43,8 +43,8 @@ export function AmbientVideo({
   decorative?: boolean;
   active?: boolean;
 }) {
-  const { ref, armed, playing } = useVideoAutoplay({ active });
   const [muted, setMuted] = useState(true);
+  const { ref, armed, playing } = useVideoAutoplay({ active, allowSound: !muted });
   const t = useTranslations('common');
   const controllerRef = useRef<HTMLDivElement>(null);
 
@@ -111,7 +111,12 @@ export function AmbientVideo({
           <button
             type="button"
             onClick={togglePlay}
-            className="duration-fast flex size-9 cursor-pointer items-center justify-center rounded-(--radius-control) text-ink-on-dark transition-colors hover:bg-accent hover:text-on-accent"
+            // `size-11` (44px), not `size-9`: every other control in the codebase — the
+            // carousel arrows, the lightbox close button, the dots — treats 44px as the tap
+            // target floor, and this pair was the one place still built for a mouse pointer.
+            // It stayed unnoticed because the controller is hover-gated everywhere except the
+            // project pages, where it renders unconditionally and the gap actually mattered.
+            className="duration-fast flex size-11 cursor-pointer items-center justify-center rounded-(--radius-control) text-ink-on-dark transition-colors hover:bg-accent hover:text-on-accent"
           >
             {playing ? (
               <Pause className="size-4" aria-hidden />
@@ -127,7 +132,7 @@ export function AmbientVideo({
               type="button"
               onClick={toggleSound}
               aria-pressed={!muted}
-              className="duration-fast flex size-9 cursor-pointer items-center justify-center rounded-(--radius-control) text-ink-on-dark transition-colors hover:bg-accent hover:text-on-accent"
+              className="duration-fast flex size-11 cursor-pointer items-center justify-center rounded-(--radius-control) text-ink-on-dark transition-colors hover:bg-accent hover:text-on-accent"
             >
               {muted ? (
                 <VolumeX className="size-4" aria-hidden />

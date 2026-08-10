@@ -31,12 +31,18 @@ export async function SiteHeader({ locale }: { locale: Locale }) {
           aria-label={t('brandHome')}
           className="rounded-(--radius-control) focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-focus"
         >
-          <BrandMark />
+          <BrandMark locale={locale} />
         </Link>
 
         <DesktopNav />
 
-        <div className="flex items-center gap-3">
+        {/* Tighter gaps below `sm`: at 320px the row is a badge, three controls and a menu
+            button, and a 12px gap between each of them overflowed the gutter. */}
+        <div className="flex items-center gap-1.5 sm:gap-3">
+          {/* Both language controls ship; only one is ever visible. The full pair needs room
+              the phone header does not have, and dropping it there entirely left changing
+              language behind the hamburger — see the `compact` note in LanguageSwitcher. */}
+          <LanguageSwitcher locale={locale} compact className="sm:hidden" />
           <LanguageSwitcher locale={locale} className="hidden sm:flex" />
           <ThemeToggle locale={locale} />
           <Magnetic className="hidden sm:inline-flex">

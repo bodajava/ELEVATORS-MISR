@@ -50,6 +50,8 @@ export function AmbientField() {
   const ringRef = useRef<HTMLDivElement>(null);
   const formRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const glowRef = useRef<HTMLDivElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+  const gridInnerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const root = rootRef.current;
@@ -134,6 +136,23 @@ export function AmbientField() {
         light.x += (lightTarget.x - light.x) * 0.075;
         light.y += (lightTarget.y - light.y) * 0.075;
         glowRef.current.style.transform = `translate3d(${light.x.toFixed(1)}px, ${light.y.toFixed(1)}px, 0) translate(-50%, -50%)`;
+
+        // The lit field. A ruled grid exists across the whole page but is painted nowhere
+        // until the pointer arrives, so the visitor appears to be carrying a lamp over
+        // graph paper. It is the light theme's answer to the dark theme's glow: on cream
+        // there is no headroom for *more* light, but there is plenty for structure that
+        // was not visible a moment ago.
+        //
+        // Two transforms, no repaint: the circular window moves to the pointer, and the
+        // grid inside it moves by exactly the opposite amount, which pins the ruling to the
+        // viewport. Repositioning a mask instead would repaint a full-screen layer every
+        // frame, which is the version of this effect that ruins a page.
+        if (gridRef.current && gridInnerRef.current) {
+          // Negated as numbers, not by prefixing a minus to the string — the light starts
+          // parked off-screen at a negative coordinate, and `-${'-9999'}` is not a length.
+          gridRef.current.style.transform = `translate3d(${light.x.toFixed(1)}px, ${light.y.toFixed(1)}px, 0)`;
+          gridInnerRef.current.style.transform = `translate3d(${(-light.x).toFixed(1)}px, ${(-light.y).toFixed(1)}px, 0)`;
+        }
       }
 
       if (hasCursor) {
@@ -219,6 +238,42 @@ export function AmbientField() {
           opacity: 'var(--ambient-glow-opacity)',
         }}
       />
+
+      {/* The lit field. A ruled grid that covers the page and is painted only inside a soft
+          circle under the pointer, so structure appears where the visitor is looking and
+          nowhere else. Both themes carry it; the light one carries it strongest, because a
+          cream page has no room for a brighter glow but plenty of room for a line that was
+          not there a second ago.
+
+          The centring is done with margins, not with a `-50%` in the transform, so the inner
+          layer can cancel the outer one exactly: the window moves, the ruling stays pinned to
+          the viewport, and neither one repaints. */}
+      <div
+        ref={gridRef}
+        data-cursor-grid
+        className="absolute top-0 left-0 hidden overflow-hidden rounded-full will-change-transform"
+        style={{
+          ['--lit-size' as string]: 'clamp(320px, 42vmin, 620px)',
+          width: 'var(--lit-size)',
+          height: 'var(--lit-size)',
+          marginLeft: 'calc(var(--lit-size) / -2)',
+          marginTop: 'calc(var(--lit-size) / -2)',
+          maskImage: 'radial-gradient(circle, #000 0%, rgba(0,0,0,0.55) 45%, transparent 72%)',
+          opacity: 'var(--ambient-grid-opacity)',
+        }}
+      >
+        <div
+          ref={gridInnerRef}
+          className="absolute top-0 left-0 h-screen w-screen will-change-transform"
+          style={{
+            marginLeft: 'calc(var(--lit-size) / 2)',
+            marginTop: 'calc(var(--lit-size) / 2)',
+            backgroundImage:
+              'linear-gradient(to right, var(--ambient-grid) 1px, transparent 1px), linear-gradient(to bottom, var(--ambient-grid) 1px, transparent 1px)',
+            backgroundSize: '3.25rem 3.25rem',
+          }}
+        />
+      </div>
 
       {/* Cursor. Rendered only where a fine pointer exists — the data-state attribute is set
           by the effect, and both parts stay hidden otherwise. */}

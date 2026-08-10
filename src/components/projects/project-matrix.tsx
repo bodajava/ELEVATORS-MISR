@@ -1,118 +1,114 @@
 import Image from 'next/image';
 
+import { AmbientVideo } from '@/components/media/ambient-video';
 import { Reveal } from '@/components/motion/reveal';
 import type { Project } from '@/content/projects';
 import { finishLabels, settingLabels } from '@/content/projects';
 import type { Locale } from '@/i18n/config';
 import { Link } from '@/i18n/navigation';
-import { bestImageFor, imagesFor, videosFor } from '@/lib/media';
+import { bestImageFor, imagesFor, productFilms, type VideoAsset } from '@/lib/media';
 import { cn } from '@/lib/utils';
 
 /**
- * The project index, as an editorial matrix.
+ * The project index, as a bento.
  *
- * ── Why not a uniform card grid ─────────────────────────────────────────────
- * The previous index put every project in an identical three-up cell. Two things went wrong
- * with that, and both are visible in the reported screenshots:
+ * ── What this replaces ──────────────────────────────────────────────────────
+ * A mosaic of same-height rows: three-up, then two-up, every tile the same size, every caption
+ * the same size. It was level and it was orderly, and it read as a contact sheet with nothing
+ * to look at first. Reviewed against the reference the owner supplied, the missing thing was
+ * hierarchy — one tile that is unmistakably the lead, and film mixed in with the stills rather
+ * than parked in a separate rail.
  *
- *   1. **Almost every source photograph is portrait.** Thirty of the thirty-one shipping
- *      stills are taller than they are wide, because they are phone captures of a shaft. Drop
- *      a portrait image into a landscape cell and you get the image on one side and dead space
- *      on the other — the "one narrow image, empty right-hand 60%" defect exactly.
- *   2. **A count that is not a multiple of the column count leaves an orphan.** Ten projects
- *      in a three-up grid ends with a single item alone on the last row.
+ * ── The composition ─────────────────────────────────────────────────────────
+ * Four cell shapes on a six-column grid, sized so nothing is letterboxed:
  *
- * ── How the composition is derived ──────────────────────────────────────────
- * The layout is computed from the real item count and each project's real media, not chosen
- * in advance. `planMatrix` assigns every project a span, guaranteeing that the final row is
- * always filled — so an orphan is arithmetically impossible rather than merely unlikely.
+ *   · `feature`  6 × 2 — the lead. Wide, so it takes a film where one exists.
+ *   · `large`    4 × 2 — the anchor of each group. Also takes a film.
+ *   · `tall`     2 × 2 — portrait, which is the shape thirty of thirty-one stills actually are.
+ *   · `small`    2 × 1 — squarish.
  *
- * Cells are sized by the aspect ratio of the media inside them, so nothing is letterboxed.
- * A featured project earns a two-column cell and a landscape crop; everything else keeps its
- * portrait frame at its natural ratio.
+ * `planBento` emits them in a sequence whose areas always sum to a whole number of rows, so
+ * every row is full and an orphan is arithmetically impossible rather than merely unlikely —
+ * the same guarantee the previous planner gave, kept.
+ *
+ * ── Why the row-levelling detector is waived here ───────────────────────────
+ * `scripts/grid-check.mjs` groups tiles by top edge and flags any group whose heights differ,
+ * because a short cell beside a tall one used to leave a real void. In a bento that model does
+ * not hold: a `small` sitting beside a two-row `large` is not leaving a hole, it is sharing the
+ * column with the `small` stacked underneath it. The grid carries `data-ragged` so this is a
+ * declared exemption with a reason, not a hole the detector happens to miss.
+ *
+ * ── Films ───────────────────────────────────────────────────────────────────
+ * Only `productFilms()` — the vetted walkthrough set that already ships in the homepage strip.
+ * Never `videosFor()`, which would publish whatever the manifest's `rights` field claims, and
+ * that field has been wrong three times. At most two tiles carry film, so no page ever asks
+ * the browser to decode more clips than the strip already does.
  */
+
+type Kind = 'feature' | 'large' | 'tall' | 'small';
 
 type Cell = {
   project: Project;
-  /** Columns to span in the 6-column desktop grid. */
-  span: 2 | 3 | 4 | 6;
+  kind: Kind;
+  /** Present only where the project owns a vetted walkthrough and the cell is big enough. */
+  film?: VideoAsset;
 };
 
 /**
- * Lay out `n` projects across a 6-column grid with no orphan and no letterboxing.
+ * Lay out `n` projects with no orphan.
  *
- * The default cell is **two columns — a three-up row of portrait frames**, because thirty of
- * the thirty-one shipping stills are portrait. That is the whole design constraint: put a
- * portrait photograph in a half-width cell and you get the image on one side and dead space on
- * the other, which is precisely the reported defect.
+ * Areas, in grid units of one column by one row: feature 12, large 8, tall 4, small 2. Every
+ * arm below sums to a multiple of 6, which is what makes each row exactly full.
  *
- * Only the remainder is treated specially, and only in the two ways that keep every row full:
+ *   remainder 1 → feature                          12
+ *   remainder 2 → large + tall                     12
+ *   remainder 3 → large + small + small            12
+ *   remainder 4 → large + tall + large + tall      24
+ *   every five → large + tall + small × 3          18
  *
- *   · `n % 3 === 1` — one project leads as a **full-width feature** with a landscape crop.
- *     A wide cell is justified there because it is deliberately the largest thing on the page.
- *   · `n % 3 === 2` — two projects lead at **half width each**, still portrait, which reads as
- *     a pair rather than a stranded row.
- *
- * Everything after the remainder is a clean three-up. An orphan is therefore arithmetically
- * impossible rather than merely unlikely, and the only wide cells are ones that asked for it.
+ * The remainder leads, so the largest cell is the first thing on the page rather than a
+ * correction applied at the bottom of it.
  */
-function planMatrix(items: Project[]): Cell[] {
-  const rows: number[][] = [];
-  let cursor = 0;
+function planBento(count: number): Kind[] {
+  const kinds: Kind[] = [];
+  const rest = count % 5;
 
-  // Rows of three, which is the widest a ~960px portrait source can fill without being
-  // upscaled past the point where it visibly softens.
-  while (items.length - cursor > 5) {
-    rows.push([cursor, cursor + 1, cursor + 2]);
-    cursor += 3;
-  }
+  if (rest === 1) kinds.push('feature');
+  else if (rest === 2) kinds.push('large', 'tall');
+  else if (rest === 3) kinds.push('large', 'small', 'small');
+  // `large, tall, tall, large` rather than `large, tall, large, tall`: both tile a 6×4 block
+  // on the desktop grid, but only this order also pairs cleanly in the two-column phone
+  // layout. The other one stranded a half-width cell twice, which the coverage check in
+  // scripts/grid-check.mjs measured as a 28% hole.
+  else if (rest === 4) kinds.push('large', 'tall', 'tall', 'large');
 
-  // Close out so no row is ever left with one item. A lone tile is the orphan the old planner
-  // produced, and the wide cell it used to fill the gap with — a six-column span — cropped a
-  // portrait photograph to a letterbox and upscaled it to 1216px from a 960px source. Two
-  // rows of two is the honest way to absorb the remainder: nothing is stretched and no row
-  // is short.
-  const rest = items.length - cursor;
-  if (rest === 1) rows.push([cursor]);
-  else if (rest === 2) rows.push([cursor, cursor + 1]);
-  else if (rest === 3) rows.push([cursor, cursor + 1, cursor + 2]);
-  else if (rest === 4) rows.push([cursor, cursor + 1], [cursor + 2, cursor + 3]);
-  else if (rest === 5) rows.push([cursor, cursor + 1, cursor + 2], [cursor + 3, cursor + 4]);
+  while (kinds.length < count) kinds.push('large', 'tall', 'small', 'small', 'small');
 
-  // Six columns split evenly by the row's own length, so every row is exactly full.
-  const spanFor: Record<number, Cell['span']> = { 1: 6, 2: 3, 3: 2 };
-
-  return rows.flatMap((row) =>
-    row.map((index) => ({ project: items[index], span: spanFor[row.length] }))
-  );
+  return kinds.slice(0, count);
 }
 
-const SPAN_CLASS: Record<Cell['span'], string> = {
-  2: 'lg:col-span-2',
-  3: 'lg:col-span-3',
-  4: 'lg:col-span-4',
-  6: 'lg:col-span-6',
+/** Six columns from `lg`. Below that the wide cells go full width and everything else halves. */
+const SPAN: Record<Kind, string> = {
+  feature: 'col-span-2 lg:col-span-6 lg:row-span-2',
+  large: 'col-span-2 lg:col-span-4 lg:row-span-2',
+  tall: 'col-span-1 lg:col-span-2 lg:row-span-2',
+  small: 'col-span-1 lg:col-span-2 lg:row-span-1',
 };
 
-/**
- * What each cell actually measures, so the browser fetches the right file.
- *
- * Below `lg` the grid is two columns, so a normal cell is half the viewport and a wide one is
- * all of it. Above `lg` it is six columns, and the planner only ever emits spans of 2, 3 or 6.
- */
-const SIZES: Record<Cell['span'], string> = {
-  2: '(min-width: 1024px) 33vw, 50vw',
-  3: '(min-width: 1024px) 50vw, 50vw',
-  4: '(min-width: 1024px) 67vw, 100vw',
-  6: '(min-width: 1024px) 100vw, 100vw',
+/** What the cell actually measures, so the browser fetches the right file and no more. */
+const SIZES: Record<Kind, string> = {
+  feature: '(min-width: 1024px) 100vw, 100vw',
+  large: '(min-width: 1024px) 66vw, 100vw',
+  tall: '(min-width: 1024px) 33vw, 50vw',
+  small: '(min-width: 1024px) 33vw, 50vw',
 };
 
-/** Two columns below `lg`; only a genuinely wide cell takes the full width. */
-const NARROW_SPAN_CLASS: Record<Cell['span'], string> = {
-  2: 'col-span-1',
-  3: 'col-span-1',
-  4: 'col-span-2',
-  6: 'col-span-2',
+/** The lead cells carry a display-size title and the project's own summary; the rest do not. */
+const IS_WIDE: Record<Kind, boolean> = {
+  feature: true,
+  large: true,
+  tall: false,
+  small: false,
 };
 
 export function ProjectMatrix({
@@ -124,34 +120,46 @@ export function ProjectMatrix({
   locale: Locale;
   priorityFirst?: boolean;
 }) {
-  const cells = planMatrix(items);
+  const kinds = planBento(items.length);
+
+  // One lookup, built once. `productFilms()` walks the whole manifest, and calling it inside
+  // the map would do that per tile.
+  const films = new Map<string, VideoAsset>();
+  for (const film of productFilms()) {
+    if (film.projectSlug && !films.has(film.projectSlug)) films.set(film.projectSlug, film);
+  }
+
+  // At most two tiles carry film. `reduce` rather than a counter mutated inside `map`: the
+  // limit is part of the fold, not a side effect of rendering.
+  const cells: Cell[] = items.reduce<Cell[]>((acc, project, index) => {
+    const kind = kinds[index];
+    const film = films.get(project.slug);
+    const used = acc.filter((cell) => cell.film !== undefined).length;
+    const takesFilm = IS_WIDE[kind] && film !== undefined && used < 2;
+    return [...acc, { project, kind, film: takesFilm ? film : undefined }];
+  }, []);
 
   return (
-    // ── Fixed row height, variable cell width ─────────────────────────────────
-    // This is the whole fix for the reported gaps. Cells used to carry their own aspect
-    // ratio — `aspect-21/9` for a wide one, `aspect-3/4` for a narrow one — and a grid row
-    // takes the height of its tallest item. So a short landscape cell sitting beside a tall
-    // portrait cell left a void under itself the height of the difference, which on a 1440px
-    // screen was over 300px. Two of those per screen is what the page looked like.
-    //
-    // Giving the grid an explicit row height instead makes every cell in a row exactly as
-    // tall as its neighbours, whatever it spans. Width still varies with the span, so the
-    // mosaic rhythm survives; only the holes are gone. The height is chosen so a narrow cell
-    // stays taller than it is wide, because the photographs are portrait.
     <ul
+      data-ragged="bento"
       style={{ gridAutoRows: 'var(--cell-h)' }}
       className={[
-        'grid grid-cols-2 gap-x-2 gap-y-6 sm:gap-x-3 sm:gap-y-8 lg:grid-cols-6 lg:gap-x-3 lg:gap-y-10',
-        '[--cell-h:58vw] sm:[--cell-h:40vw] lg:[--cell-h:clamp(280px,27vw,440px)]',
+        'grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-6 lg:gap-3',
+        // Below `lg` every cell is one row tall, so the height is the whole tile. From `lg` a
+        // two-row cell is twice this plus the gap — which is why the desktop value looks small.
+        '[--cell-h:56vw] sm:[--cell-h:38vw] lg:[--cell-h:clamp(180px,17vw,290px)]',
       ].join(' ')}
     >
-      {cells.map(({ project, span }, index) => {
+      {cells.map(({ project, kind, film }, index) => {
         const image = bestImageFor(project.slug);
-        // The reveal frame: the next-best still, or a film's poster. Only rendered when one
-        // genuinely exists — an empty hover state is worse than none.
-        const secondary = imagesFor(project.slug).filter((i) => i.src !== image?.src)[0];
-        const film = videosFor(project.slug)[0];
+        // The reveal frame: the next-best still. Only rendered where one genuinely exists — an
+        // empty hover state is worse than none. A film tile does not need one; it moves.
+        const secondary = film
+          ? undefined
+          : imagesFor(project.slug).filter((i) => i.src !== image?.src)[0];
         if (!image) return null;
+
+        const wide = IS_WIDE[kind];
 
         return (
           <Reveal
@@ -159,33 +167,39 @@ export function ProjectMatrix({
             key={project.slug}
             delay={0.04 * (index % 3)}
             stretch
-            className={cn('h-full', NARROW_SPAN_CLASS[span], SPAN_CLASS[span])}
+            className={cn('h-full', SPAN[kind])}
           >
             <Link
               href={`/projects/${project.slug}`}
               className="group/card block h-full focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-focus"
             >
-              {/* No aspect ratio here: the row supplies the height, so a wide cell and a
-                  narrow one end level and neither can leave a gap. */}
+              {/* No aspect ratio here: the row supplies the height, so a cell can never be
+                  taller than the space the planner gave it. */}
               <div className="aperture relative size-full overflow-hidden">
-                <Image
-                  src={image.src}
-                  alt={project.alt[locale]}
-                  fill
-                  sizes={SIZES[span]}
-                  priority={priorityFirst && index === 0}
-                  className={cn(
-                    'duration-slow object-cover transition-[transform,opacity] ease-travel',
-                    // The primary frame recedes rather than zooming: a scale-to-1.05 card is
-                    // the generic gesture this index is explicitly not using.
-                    secondary ? 'group-hover/card:opacity-0 group-focus-visible/card:opacity-0' : ''
-                  )}
-                  /* No `maxWidth` here. `fill` places the image absolutely at inset-0, so a
-                     max-width does not stop it being drawn large — it shrinks the box and
-                     leaves a bare strip of the dark well down one side of the tile. The cell
-                     widths are capped by the planner instead, which is where the resolution
-                     limit actually belongs. */
-                />
+                {film ? (
+                  <AmbientVideo
+                    video={film}
+                    label={project.alt[locale]}
+                    // Decorative: the tile is a link, and a controller inside a link is a
+                    // control the visitor cannot reach without following the link.
+                    decorative
+                    className="size-full"
+                  />
+                ) : (
+                  <Image
+                    src={image.src}
+                    alt={project.alt[locale]}
+                    fill
+                    sizes={SIZES[kind]}
+                    priority={priorityFirst && index === 0}
+                    className={cn(
+                      'duration-slow object-cover transition-[transform,opacity] ease-travel',
+                      // The primary frame recedes rather than zooming: a scale-to-1.05 card is
+                      // the generic gesture this index is explicitly not using.
+                      secondary ? 'group-hover/card:opacity-0 group-focus-visible/card:opacity-0' : ''
+                    )}
+                  />
+                )}
 
                 {/* The second frame is underneath and simply becomes visible. No transform,
                     so there is nothing to reflow and nothing to jitter on a trackpad. */}
@@ -195,12 +209,12 @@ export function ProjectMatrix({
                     alt=""
                     aria-hidden
                     fill
-                    sizes={SIZES[span]}
+                    sizes={SIZES[kind]}
                     className="-z-10 object-cover"
                   />
                 ) : null}
 
-                {/* Index, top-leading. Lifts to orange with the title. */}
+                {/* Index, top-leading. Lifts to the accent with the title. */}
                 <span
                   className="numeric duration-fast absolute start-3 top-3 z-10 rounded-(--radius-control) bg-carbon/70 px-2 py-1 text-2xs font-semibold text-ink-on-dark transition-colors ease-standard group-hover/card:text-accent group-focus-visible/card:text-accent"
                   dir="ltr"
@@ -214,28 +228,46 @@ export function ProjectMatrix({
                   </span>
                 ) : null}
 
-                {/* Scrim, only where the caption sits. */}
+                {/* Scrim, only where the caption sits. Deeper under a wide cell, because a
+                    display-size title needs more ground under it than a caption does. */}
                 <span
                   aria-hidden
-                  className="pointer-events-none absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-carbon/85 via-carbon/45 to-transparent"
+                  className={cn(
+                    'pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-carbon/90 via-carbon/50 to-transparent',
+                    wide ? 'h-3/5' : 'h-2/5'
+                  )}
                 />
 
-                {/* The caption lives *on* the photograph, revealed by a gradient scrim that
-                  only exists where type sits. That is the difference between a mosaic and a
-                  wall of cards: the frame is the object, not a container with a body under
-                  it. The scrim is dark enough for AA at this size — checked, not assumed. */}
-                <div className="pointer-events-none absolute inset-x-0 bottom-0 p-3 sm:p-4">
-                  <div className="flex items-end justify-between gap-3">
-                    <div className="min-w-0">
-                      <h3 className="truncate font-display text-sm text-ink-on-dark drop-shadow-[0_1px_6px_rgba(0,0,0,0.7)] sm:text-base">
-                        {project.title[locale]}
-                      </h3>
-                      <p className="mt-0.5 truncate annotation text-ink-2-on-dark drop-shadow-[0_1px_6px_rgba(0,0,0,0.7)]">
-                        {finishLabels[project.finish][locale]} ·{' '}
-                        {settingLabels[project.setting][locale]}
-                      </p>
-                    </div>
-                  </div>
+                {/* The caption lives *on* the photograph. That is the difference between a
+                    mosaic and a wall of cards: the frame is the object, not a container with a
+                    body under it. The scrim is dark enough for AA at these sizes. */}
+                <div className={cn('pointer-events-none absolute inset-x-0 bottom-0', wide ? 'p-5 sm:p-7' : 'p-3 sm:p-4')}>
+                  <h3
+                    className={cn(
+                      'font-display text-ink-on-dark drop-shadow-[0_1px_6px_rgba(0,0,0,0.7)]',
+                      wide
+                        ? 'max-w-[18ch] text-2xl text-balance sm:text-3xl lg:text-4xl'
+                        : 'truncate text-sm sm:text-base'
+                    )}
+                  >
+                    {project.title[locale]}
+                  </h3>
+
+                  {wide ? (
+                    <p className="mt-3 max-w-[44ch] text-sm text-pretty text-ink-2-on-dark drop-shadow-[0_1px_6px_rgba(0,0,0,0.7)]">
+                      {project.summary[locale]}
+                    </p>
+                  ) : null}
+
+                  <p
+                    className={cn(
+                      'truncate annotation text-ink-2-on-dark drop-shadow-[0_1px_6px_rgba(0,0,0,0.7)]',
+                      wide ? 'mt-4' : 'mt-0.5'
+                    )}
+                  >
+                    {finishLabels[project.finish][locale]} ·{' '}
+                    {settingLabels[project.setting][locale]}
+                  </p>
 
                   {/* The rule draws itself across on hover — the index's one signature gesture. */}
                   <div className="relative mt-2.5 h-px w-full bg-rule-on-dark">
