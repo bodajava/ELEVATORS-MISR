@@ -4,6 +4,7 @@ import { headers } from 'next/headers';
 
 import { DatabaseNotConfiguredError } from '@/lib/db/client';
 import { getInspectionStore } from '@/lib/db/inspection-repository';
+import { notifyLead } from '@/lib/email/lead-notification';
 import { MissingEnvError } from '@/lib/env';
 import { HONEYPOT_FIELD, RENDERED_AT_FIELD, inspectHoneypot } from '@/lib/inspection/honeypot';
 import { clientAddressFrom, getRateLimiter, rateLimitKey } from '@/lib/inspection/rate-limit';
@@ -131,6 +132,12 @@ export async function submitInspectionRequest(
   /* 4 ─ persist. */
   try {
     const { reference } = await getInspectionStore().create(parsed.data);
+    // Awaited, not fired-and-forgotten: a serverless runtime can freeze the function the
+    // instant this action returns, and an unawaited promise in flight at that moment may
+    // simply never run. `notifyLead` swallows every error of its own — see its own
+    // documentation — so awaiting it here cannot turn a successful submission into a failed
+    // one; it only guarantees the send is attempted before the visitor sees success.
+    await notifyLead(parsed.data, reference);
     return { status: 'success', reference };
   } catch (error) {
     if (error instanceof DatabaseNotConfiguredError) {

@@ -7,6 +7,18 @@
 
 ---
 
+> **Update — 2026-08-10.** Both blockers in §1 are resolved. A Supabase Postgres database is
+> configured (`DATABASE_URL` + `DIRECT_URL`, the latter on the Session pooler — Supabase's
+> direct host is IPv6-only and unreachable from this network; see `.env.example`),
+> `pnpm db:migrate` has run against it, and `scripts/form-check.mjs` passes **136/136** against
+> a real production build with a real database. Lead notification is now wired: a successful
+> submission sends an email via Resend to `LEAD_NOTIFICATION_EMAIL`, implemented at
+> `src/lib/email/lead-notification.ts` and called from `src/app/[locale]/contact/actions.ts`
+> after persistence succeeds — but `RESEND_API_KEY` / `LEAD_NOTIFICATION_EMAIL` /
+> `LEAD_FROM_EMAIL` are still blank, so no notification has actually sent yet. `RATE_LIMIT_SALT`
+> is also now configured. Test rows written during verification were deleted from the database
+> before handoff. The rest of this report is unchanged and still describes 2026-08-08.
+
 ## 1. Decision
 
 **NOT production ready.** Two blockers remain, both requiring credentials or a business

@@ -143,9 +143,15 @@ Binding outputs of Phase 0 that later work must respect:
 
 ## Current status
 
-The build is feature-complete and verified; it is **not production ready**, because the
-inspection form has no database and no lead notification. Full status, evidence and the
-remaining credential list:
+The build is feature-complete and verified. As of 2026-08-10 the two hard blockers from the
+readiness report are resolved: a real PostgreSQL database (Supabase) is configured and
+migrated, and `scripts/form-check.mjs` passes end to end against it (136/136). Lead
+notification is implemented (`src/lib/email/lead-notification.ts`, Resend) and wired into the
+submission path, but not yet active — `RESEND_API_KEY`, `LEAD_NOTIFICATION_EMAIL` and
+`LEAD_FROM_EMAIL` are still blank, which is a supported state: submissions still persist
+correctly, nobody is emailed about them yet. Still open: no confirmed phone number (the call
+path does not ship without one), the "ARAB EGYPT FOR ELEVATORS" burned-in decision, and the
+marketing-video rights questions. Full status and evidence:
 [`docs/FINAL-PRODUCTION-READINESS-REPORT.md`](docs/FINAL-PRODUCTION-READINESS-REPORT.md).
 
 Verification harnesses live in `scripts/` and are run against a dev or production server:

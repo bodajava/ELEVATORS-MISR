@@ -63,4 +63,19 @@ const developmentSalt = `dev-only-${Math.random().toString(36).slice(2)}`;
 /** True when persistence is configured. Callers branch on this rather than catching. */
 export const isDatabaseConfigured = () => databaseUrl() !== null;
 
+/**
+ * Lead notification — Resend.
+ *
+ * All three or none: a from-address with nowhere to send is as useless as a destination with
+ * nothing configured to send from. `leadNotificationConfigured()` is the single gate every
+ * caller checks; the three readers below exist for the one call site that already knows the
+ * gate passed, so it is not re-deriving `null` checks it has already done.
+ */
+export const resendApiKey = () => read('RESEND_API_KEY');
+export const leadNotificationEmail = () => read('LEAD_NOTIFICATION_EMAIL');
+export const leadFromEmail = () => read('LEAD_FROM_EMAIL');
+
+export const isLeadNotificationConfigured = () =>
+  resendApiKey() !== null && leadNotificationEmail() !== null && leadFromEmail() !== null;
+
 export const isProduction = () => process.env.NODE_ENV === 'production';
