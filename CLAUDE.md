@@ -36,6 +36,15 @@ These are confirmed requirements. Treat them as binding; do not restate them as 
 - **Scope: panorama elevators exclusively.** The site does not sell or market any other elevator
   type. Do not invent adjacent product lines (freight, home lifts, escalators, service contracts)
   to fill out a page.
+
+  **Amended by the owner on 2026-08-12, and only this far.** The owner supplied a company
+  statement naming electro-hydraulic and electro-mechanical drives and the buildings the
+  company works in — villas, companies, museums, factories — and it ships verbatim in the
+  homepage proof section (`proof.lede` in `src/content/home.ts`). The inspection form's "What
+  is the space?" question lost "Apartment building" and gained "Factories" in the same
+  instruction. Nothing else widened: the site still markets panorama cars and nothing else,
+  there is still no second product line, no page has been added, and the rule above continues
+  to hold for everything the owner has not named. Do not extrapolate from these two strings.
 - **Primary conversion: requesting a physical site inspection.** Every page's primary CTA path
   leads here. Secondary actions (browse gallery, human follow-up form, and — only once a confirmed
   phone number exists — a direct call) must stay visually subordinate. See _Contact and conversation
@@ -159,6 +168,20 @@ for a single instance, is what actually runs today. Still open: no confirmed pho
 call path does not ship without one), the "ARAB EGYPT FOR ELEVATORS" burned-in decision, and
 the marketing-video rights questions. Full status and evidence:
 [`docs/FINAL-PRODUCTION-READINESS-REPORT.md`](docs/FINAL-PRODUCTION-READINESS-REPORT.md).
+
+**Owner content and Arabic pass, 2026-08-12.** The owner supplied replacement homepage copy
+(the "first and only in Egypt" claim, the company statement, the coverage widening to the Arab
+world) and compound names for four of the five featured installations, so the site now publishes
+a location per project — individual client names are still never published, and there is still
+no street address anywhere. The inspection form lost its "Finish" question and swapped
+"Apartment building" for "Factories"; `finish` is no longer collected, though the column and its
+default survive so historic rows stay readable, and migration `0001_inspection_setting_factory`
+adds the new enum value (applied). Three Arabic defects were fixed with it: every `font-display`
+/ `font-sans` element rendered Arabic in **Arial**, because `next/font`'s metric-adjusted Latin
+fallback sits ahead of Alexandria in the stack and covers Arabic — `:lang(ar)` now redefines the
+font variables themselves; Arabic headings inherited Latin leading from the size utilities and
+crowded their tashkeel; and the Marketing Films rail sized its cards from a desktop `36vw` rule
+that produced 118px-wide cards on a phone.
 
 Verification harnesses live in `scripts/` and are run against a dev or production server:
 `hero-check`, `form-check`, `matrix-check`, `emptiness`, `about-check`, `perf`, `index-check`,

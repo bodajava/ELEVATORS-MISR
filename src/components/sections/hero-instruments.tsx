@@ -108,12 +108,13 @@ export function HeroSpecRail({ locale }: { locale: Locale }) {
     locale === 'en'
       ? [
           { k: 'Type', v: 'Panorama only' },
-          { k: 'Coverage', v: 'Egypt-wide' },
+          // Widened from "Egypt-wide" on the owner's instruction, 2026-08-12.
+          { k: 'Coverage', v: 'Across the Arab world' },
           { k: 'Quoting', v: 'After inspection' },
         ]
       : [
           { k: 'التخصص', v: 'بانوراما فقط' },
-          { k: 'النطاق', v: 'كل أنحاء مصر' },
+          { k: 'النطاق', v: 'على مستوى الوطن العربي' },
           { k: 'التسعير', v: 'بعد المعاينة' },
         ];
 

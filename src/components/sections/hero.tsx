@@ -458,13 +458,22 @@ export function Hero({ locale, heroAsset }: { locale: Locale; heroAsset: HeroAss
         </div>
       </div>
 
-      {/* Cream breathing room after the settled frame, before the next section. */}
-      <div className="mx-auto w-full max-w-page px-(--gutter) pt-16 pb-20 lg:pt-24">
-        <div className="grid gap-6 pt-5 rule-t lg:grid-cols-[1.1fr_1fr] lg:gap-16">
-          <p className="max-w-[52ch] text-base text-pretty text-ink sm:text-lg">
+      {/* Cream breathing room after the settled frame, before the next section.
+          The claim leads and the lede answers it. They stack in one column on a phone with the
+          claim set larger: a two-column split at 390px gave each of them about 24 characters a
+          line, which in Arabic is two or three words. */}
+      <div className="mx-auto w-full max-w-page px-(--gutter) pt-12 pb-14 lg:pt-20 lg:pb-20">
+        <div className="grid gap-6 pt-5 rule-t lg:grid-cols-[1.15fr_1fr] lg:items-start lg:gap-16">
+          <p className="flex max-w-[32ch] gap-3 text-xl leading-snug font-medium text-balance text-ink sm:text-2xl">
+            {/* The one accent mark in this band, and a fill rather than text — full-strength
+                orange as small text on cream is 2.5:1 and fails. It states nothing the words
+                do not already state. */}
+            <span aria-hidden className="mt-3 size-1.5 shrink-0 rounded-full bg-accent sm:mt-4" />
+            <span>{hero.claim[locale]}</span>
+          </p>
+          <p className="max-w-[52ch] text-base text-pretty text-ink-2 sm:text-lg">
             {hero.lede[locale]}
           </p>
-          <p className="max-w-[52ch] text-sm text-ink-2">{hero.note[locale]}</p>
         </div>
       </div>
     </section>

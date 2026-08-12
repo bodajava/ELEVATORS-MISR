@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 
 import {
   fieldErrors,
-  finishes,
   inspectionRequestSchema,
   messageFor,
   normalisePhone,
@@ -21,7 +20,6 @@ const valid = {
   phone: '01012345678',
   area: 'New Cairo',
   setting: 'villa' as const,
-  finish: 'brass-glass' as const,
   notes: 'Three floors.',
   consent: true as const,
   locale: 'en' as const,
@@ -82,7 +80,7 @@ describe('inspectionRequestSchema', () => {
     expect(parsed.area).toBe('New Cairo');
   });
 
-  it('defaults setting, finish and notes when the fields are absent', () => {
+  it('defaults setting and notes when the fields are absent', () => {
     const parsed = inspectionRequestSchema.parse({
       name: valid.name,
       phone: valid.phone,
@@ -91,7 +89,6 @@ describe('inspectionRequestSchema', () => {
       locale: 'ar',
     });
     expect(parsed.setting).toBe('unsure');
-    expect(parsed.finish).toBe('unsure');
     expect(parsed.notes).toBe('');
   });
 
@@ -116,9 +113,13 @@ describe('inspectionRequestSchema', () => {
     }
   });
 
-  it('rejects a setting or finish outside the enum, however plausible it looks', () => {
+  it('rejects a setting outside the enum, however plausible it looks', () => {
     expect(inspectionRequestSchema.safeParse({ ...valid, setting: 'palace' }).success).toBe(false);
-    expect(inspectionRequestSchema.safeParse({ ...valid, finish: 'gold' }).success).toBe(false);
+    // Retired on 2026-08-12 and no longer accepted, even though the database enum still
+    // carries the value for the rows that were written before then.
+    expect(inspectionRequestSchema.safeParse({ ...valid, setting: 'residence' }).success).toBe(
+      false
+    );
   });
 
   it('caps every free-text field so a payload cannot be used as storage', () => {
@@ -139,8 +140,10 @@ describe('inspectionRequestSchema', () => {
   it('keeps the enum vocabulary aligned with the database enums', () => {
     // If either list changes, the Drizzle pgEnum must change with it or inserts will fail at
     // runtime rather than here.
-    expect([...settings]).toEqual(['villa', 'residence', 'commercial', 'unsure']);
-    expect([...finishes]).toEqual(['brass-glass', 'smoked-glass', 'unsure']);
+    // The database enum is a superset: it also carries the retired `residence`, which no
+    // longer appears here. Anything this list gains must be added to the pgEnum, or inserts
+    // fail at runtime rather than here.
+    expect([...settings]).toEqual(['villa', 'factory', 'commercial', 'unsure']);
   });
 });
 

@@ -31,7 +31,12 @@ export function Proof({ locale }: { locale: Locale }) {
             <h2 className="mt-5 max-w-[18ch] text-3xl text-ink-on-dark lg:text-4xl">
               {proof.heading[locale]}
             </h2>
-            <div className="mt-8 flex flex-col gap-4">
+            <Reveal>
+              <p className="mt-7 max-w-[46ch] text-lg text-pretty text-ink-on-dark">
+                {proof.lede[locale]}
+              </p>
+            </Reveal>
+            <div className="mt-7 flex flex-col gap-4">
               {proof.body[locale].map((paragraph, i) => (
                 <Reveal key={paragraph} delay={0.06 * i}>
                   <p className="max-w-[52ch] text-base text-ink-2-on-dark">{paragraph}</p>

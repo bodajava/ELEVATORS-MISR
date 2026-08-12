@@ -30,8 +30,15 @@ export const hero: {
   ctaSecondary: Bilingual;
   /** Annotation printed over the hero footage. Describes what is on screen. */
   mediaLabel: Bilingual;
-  /** Sits under the aperture. States the pricing position plainly rather than hiding it. */
-  note: Bilingual;
+  /**
+   * The positioning claim, supplied by the owner on 2026-08-12 and printed as given.
+   *
+   * It replaces the pricing note that used to sit in this slot — the owner asked for that note
+   * removed and for this line to lead the homepage instead. The pricing position itself is not
+   * lost: the process section and the inspection page both still say that measurement comes
+   * before any figure, and no price appears anywhere on the site.
+   */
+  claim: Bilingual;
 } = {
   wordmark: {
     en: ['Egypt', 'Elevators'],
@@ -57,19 +64,29 @@ export const hero: {
     en: 'Brass and glass car — private villa',
     ar: 'كابينة نحاس وزجاج — فيلا خاصة',
   },
+  // Owner's wording, 2026-08-12. Arabic is the source here and the English mirrors it, which
+  // is why neither reads as a translation of the other.
   lede: {
-    en: 'We build panorama elevators — and only panorama elevators. Glass cars that let a stairwell keep its light, and let a hall keep its view.',
-    ar: 'نحن متخصصون في مصاعد البانوراما وحدها. كابينات زجاجية تُبقي بئر الدرج محتفظًا بضوئه، وتترك البهو محتفظًا بامتداده.',
+    en: 'We build fully panoramic elevators — glass on every face of the car, and a complete view from inside it.',
+    ar: 'نحن نبني مصاعد بانورامية بالكامل تسمح برؤية كاملة.',
   },
-  note: {
-    en: 'Every project starts with a physical site inspection. We measure before we quote — never the other way round.',
-    ar: 'كل مشروع يبدأ بمعاينة ميدانية على الطبيعة. نقيس قبل أن نُسعّر، لا العكس.',
+  claim: {
+    en: 'The first and only company in Egypt manufacturing and installing full panoramic home lifts.',
+    ar: 'الأولى والوحيدة في مصر لصناعة وتركيب الهوم ليفت الفول بانوراميك.',
   },
 };
 
 export const proof: {
   eyebrow: Bilingual;
   heading: Bilingual;
+  /**
+   * The company statement, supplied by the owner on 2026-08-12 and printed as given.
+   *
+   * It is the one place on the homepage that names the drive types and the buildings the
+   * company works in, and it carries the owner's own experience figure. It leads this section
+   * because this section is where the site states what is on the record.
+   */
+  lede: Bilingual;
   body: BilingualList;
   coverageLabel: Bilingual;
 } = {
@@ -77,6 +94,10 @@ export const proof: {
   heading: {
     en: 'A documented record, counted honestly',
     ar: 'سجل موثّق، محسوب بأمانة',
+  },
+  lede: {
+    en: 'Egypt Elevators supplies electro-hydraulic and electro-mechanical elevators — for villas, for companies, for museums and for factories — with more than twenty years of experience behind them.',
+    ar: 'تقدّم لك شركة مصر العربية أفضل المصاعد الكهروهيدروليك والكهروميكانيك، سواء للفيلات أو الشركات والمتاحف والمصانع، بخبرة أكثر من عشرين عامًا.',
   },
   body: {
     en: [
@@ -164,9 +185,12 @@ export const projectsSection: {
 } = {
   eyebrow: { en: 'Selected work', ar: 'أعمال مختارة' },
   heading: { en: 'Installations, as photographed', ar: 'أعمال مُنفَّذة، كما صُوّرت' },
+  // Reworded 2026-08-12. The compounds are now named — the owner supplied them and asked for
+  // them on the cards — so the old promise that no location is published is no longer true and
+  // is not printed. Individual clients are still never named, and no street address appears.
   lede: {
-    en: 'Photographs of our own installations. Descriptions cover what is visible in the frame — we do not publish client names or addresses.',
-    ar: 'صور لأعمال نفّذناها بأنفسنا. تصف النصوص ما هو ظاهر في الصورة، ولا نَنشر أسماء العملاء ولا عناوينهم.',
+    en: 'Photographs of our own installations, named by the compound each one stands in. Descriptions cover what is visible in the frame.',
+    ar: 'صور لأعمال نفّذناها بأنفسنا، منسوبة إلى الكومباوند الذي تقف فيه. تصف النصوص ما هو ظاهر في الصورة.',
   },
 };
 
@@ -303,6 +327,12 @@ export const socialProof: {
 export const finalCta: {
   heading: Bilingual;
   body: Bilingual;
+  /**
+   * Who the company works with, in the owner's own words (supplied 2026-08-12). It sits with
+   * the closing call to action because that is the point at which a visitor is deciding
+   * whether this company takes on work like theirs.
+   */
+  collaboration: Bilingual;
   reassurance: BilingualList;
 } = {
   heading: {
@@ -312,6 +342,10 @@ export const finalCta: {
   body: {
     en: 'Tell us where the building is and how to reach you. Someone from the team will arrange a visit to measure the space.',
     ar: 'أخبرنا بموقع المبنى وكيفية الوصول إليك، وسيتولى أحد أفراد الفريق ترتيب زيارة لقياس المكان.',
+  },
+  collaboration: {
+    en: 'We are glad to advise, and to work with museums, public bodies, companies and individuals alike.',
+    ar: 'يسعدنا تقديم الاستشارات والتعاون المثمر، سواء مع المتاحف والهيئات العامة والشركات أو الأفراد.',
   },
   reassurance: {
     en: [

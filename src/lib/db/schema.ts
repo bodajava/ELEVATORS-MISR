@@ -14,13 +14,30 @@ import { index, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from 'driz
  * would be personal data under Egypt's PDPL with no operational purpose behind it.
  */
 
+/**
+ * What kind of building the lift is going into.
+ *
+ * `factory` was added on 2026-08-12, when the owner replaced the "Apartment building" option
+ * with "Factories". `residence` stays in the type because rows recorded before that date hold
+ * it and a Postgres enum value cannot be removed without rewriting the column — but the form
+ * no longer offers it and `src/lib/inspection/schema.ts` no longer accepts it, so nothing new
+ * can be written with it.
+ */
 export const inspectionSetting = pgEnum('inspection_setting', [
   'villa',
   'residence',
+  'factory',
   'commercial',
   'unsure',
 ]);
 
+/**
+ * The finish the visitor had in mind.
+ *
+ * **No longer collected.** The question was removed from the form on 2026-08-12 on the
+ * owner's instruction. The column is kept, with its default, so the historic rows that do
+ * carry an answer stay readable; every new row takes the default and means "not asked".
+ */
 export const inspectionFinish = pgEnum('inspection_finish', [
   'brass-glass',
   'smoked-glass',
@@ -58,6 +75,7 @@ export const inspectionRequests = pgTable(
     area: text('area').notNull(),
 
     setting: inspectionSetting('setting').notNull().default('unsure'),
+    /** Not written any more — see the enum above. Every new row takes the default. */
     finish: inspectionFinish('finish').notNull().default('unsure'),
     notes: text('notes').notNull().default(''),
 

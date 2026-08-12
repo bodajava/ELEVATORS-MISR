@@ -48,14 +48,12 @@ type Row = { labelEn: string; labelAr: string; value: string; href?: string };
 
 function fieldRows(request: InspectionRequest): Row[] {
   const setting = inspectionForm.setting.options[request.setting];
-  const finish = inspectionForm.finish.options[request.finish];
 
   const rows: Row[] = [
     { labelEn: 'Name', labelAr: 'الاسم', value: request.name },
     { labelEn: 'Phone', labelAr: 'الهاتف', value: request.phone, href: `tel:${request.phone}` },
     { labelEn: 'Area', labelAr: 'المنطقة', value: request.area },
     { labelEn: 'Setting', labelAr: 'نوع المكان', value: `${setting.en} / ${setting.ar}` },
-    { labelEn: 'Finish', labelAr: 'التشطيب', value: `${finish.en} / ${finish.ar}` },
     {
       labelEn: 'Submitted in',
       labelAr: 'لغة النموذج',
@@ -191,7 +189,6 @@ export function renderLeadEmailText(
   submittedAt: Date
 ): string {
   const setting = inspectionForm.setting.options[request.setting];
-  const finish = inspectionForm.finish.options[request.finish];
   const timestamp = submittedAt.toLocaleString('en-GB', {
     timeZone: 'Africa/Cairo',
     dateStyle: 'medium',
@@ -206,7 +203,6 @@ export function renderLeadEmailText(
     `Phone: ${request.phone}`,
     `Area: ${request.area}`,
     `Setting: ${setting.en} / ${setting.ar}`,
-    `Finish: ${finish.en} / ${finish.ar}`,
     `Submitted in: ${request.locale === 'ar' ? 'Arabic' : 'English'}`,
     request.notes ? `Notes: ${request.notes}` : null,
     '',

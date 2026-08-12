@@ -32,6 +32,9 @@ export async function InspectionCta({ locale }: { locale: Locale }) {
               <p className="mt-6 max-w-[46ch] text-base text-pretty text-ink-2-on-dark">
                 {finalCta.body[locale]}
               </p>
+              <p className="mt-4 max-w-[46ch] text-base text-pretty text-ink-2-on-dark">
+                {finalCta.collaboration[locale]}
+              </p>
 
               <div className="mt-10">
                 <Magnetic>

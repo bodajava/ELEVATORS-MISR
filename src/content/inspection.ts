@@ -1,5 +1,5 @@
 import type { Locale } from '@/i18n/config';
-import type { Finish, Setting } from '@/lib/inspection/schema';
+import type { Setting } from '@/lib/inspection/schema';
 
 /**
  * Inspection form copy.
@@ -19,7 +19,6 @@ export const inspectionForm: {
   phone: { label: Bilingual; hint: Bilingual; placeholder: Bilingual };
   area: { label: Bilingual; hint: Bilingual; placeholder: Bilingual };
   setting: { label: Bilingual; options: Record<Setting, Bilingual> };
-  finish: { label: Bilingual; hint: Bilingual; options: Record<Finish, Bilingual> };
   notes: { label: Bilingual; hint: Bilingual; placeholder: Bilingual };
   consent: { label: Bilingual };
   submit: Bilingual;
@@ -52,26 +51,16 @@ export const inspectionForm: {
     placeholder: { en: 'New Cairo', ar: 'التجمع' },
   },
 
+  // "Apartment building" was replaced by "Factories" on the owner's instruction, 2026-08-12 —
+  // the company's own statement of what it works on names museums and factories, and no
+  // apartment-building option is offered any more.
   setting: {
     label: { en: 'What is the space?', ar: 'ما نوع المكان؟' },
     options: {
       villa: { en: 'Villa', ar: 'فيلا' },
-      residence: { en: 'Apartment building', ar: 'عمارة سكنية' },
+      factory: { en: 'Factory', ar: 'مصانع' },
       commercial: { en: 'Commercial', ar: 'مبنى تجاري' },
       unsure: { en: 'Something else', ar: 'شيء آخر' },
-    },
-  },
-
-  finish: {
-    label: { en: 'Finish you have in mind', ar: 'التشطيب الذي تفكّر فيه' },
-    hint: {
-      en: 'Only if you already know. It is the first thing we look at on site anyway.',
-      ar: 'فقط إن كنت تعرف. وهو أول ما ننظر إليه في الموقع على أي حال.',
-    },
-    options: {
-      'brass-glass': { en: 'Brass and glass', ar: 'نحاس وزجاج' },
-      'smoked-glass': { en: 'Smoked glass and chrome', ar: 'زجاج مدخّن وكروم' },
-      unsure: { en: 'Not decided', ar: 'لم أقرّر بعد' },
     },
   },
 

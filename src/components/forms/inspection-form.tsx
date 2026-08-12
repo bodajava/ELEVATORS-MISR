@@ -9,7 +9,7 @@ import { Button, CtaArrow } from '@/components/ui/button';
 import { inspectionForm, inspectionResult } from '@/content/inspection';
 import type { Locale } from '@/i18n/config';
 import { HONEYPOT_FIELD, RENDERED_AT_FIELD } from '@/lib/inspection/honeypot';
-import { finishes, settings } from '@/lib/inspection/schema';
+import { settings } from '@/lib/inspection/schema';
 
 /**
  * The inspection request form.
@@ -215,18 +215,6 @@ function FormBody({
           options={settings.map((value) => ({
             value,
             label: inspectionForm.setting.options[value][locale],
-          }))}
-        />
-
-        <RadioGroup
-          name="finish"
-          legend={inspectionForm.finish.label[locale]}
-          hint={inspectionForm.finish.hint[locale]}
-          error={errors.finish}
-          defaultValue={(values?.finish as (typeof finishes)[number]) || 'unsure'}
-          options={finishes.map((value) => ({
-            value,
-            label: inspectionForm.finish.options[value][locale],
           }))}
         />
 

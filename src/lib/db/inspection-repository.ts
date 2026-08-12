@@ -51,7 +51,6 @@ const postgresStore: InspectionStore = {
             phone: request.phone,
             area: request.area,
             setting: request.setting,
-            finish: request.finish,
             notes: request.notes,
             locale: request.locale,
             consentedAt,
@@ -107,7 +106,9 @@ const memoryStore: InspectionStore = {
       phone: request.phone,
       area: request.area,
       setting: request.setting,
-      finish: request.finish,
+      // Not collected any more. The real table applies this as a column default; the memory
+      // store has to write it explicitly to produce the same row shape.
+      finish: 'unsure',
       notes: request.notes,
       locale: request.locale,
       consentedAt: now,

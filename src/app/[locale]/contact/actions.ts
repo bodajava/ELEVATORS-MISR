@@ -47,7 +47,6 @@ export type SubmittedValues = {
   phone: string;
   area: string;
   setting: string;
-  finish: string;
   notes: string;
   consent: boolean;
 };
@@ -68,7 +67,6 @@ function submittedValues(formData: FormData): SubmittedValues {
     phone: asString(formData.get('phone')),
     area: asString(formData.get('area')),
     setting: asString(formData.get('setting')),
-    finish: asString(formData.get('finish')),
     notes: asString(formData.get('notes')),
     consent: formData.get('consent') === 'on' || formData.get('consent') === 'true',
   };
@@ -117,7 +115,6 @@ export async function submitInspectionRequest(
     phone: formData.get('phone') ?? '',
     area: formData.get('area') ?? '',
     setting: formData.get('setting') ?? undefined,
-    finish: formData.get('finish') ?? undefined,
     notes: formData.get('notes') ?? undefined,
     // An unchecked checkbox is absent from FormData entirely, which `z.literal(true)` must
     // see as `false` rather than `undefined` for the message to be the right one.

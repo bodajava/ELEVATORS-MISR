@@ -1,0 +1,1 @@
+ALTER TYPE "public"."inspection_setting" ADD VALUE 'factory' BEFORE 'commercial';

@@ -64,6 +64,53 @@ const bring = (page) =>
     return true;
   }, RAIL);
 
+/**
+ * Wait until the rail has actually stopped moving.
+ *
+ * A fixed delay was fine when a phone showed three cards at once: a sample taken mid-scroll
+ * still had some card fully inside the rail. Since the cards were sized up (they were 118px
+ * wide on a phone — see film-carousel.tsx) exactly one card is fully visible at a time, and a
+ * sample taken while a 235px smooth scroll is still in flight sees **none** of them. That
+ * dropped a slide from the reachable set at random, on a different viewport each run, and the
+ * carousel itself was fine — driven with a long enough wait it visits 0 → 1 → 2 → 3 → 0 at
+ * every width in both locales.
+ *
+ * So: poll the scroll position instead of guessing. Wait for the rail to *start* moving first,
+ * then for it to stop — a stability test alone returns immediately, because a click's smooth
+ * scroll has not begun by the time the first two samples are taken.
+ */
+const settle = (page, timeout = 4500) =>
+  page.evaluate(
+    async ([sel, limit]) => {
+      const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+      const track = document.querySelector(sel);
+      if (!track) return false;
+      const deadline = Date.now() + limit;
+      const start = track.scrollLeft;
+
+      // Movement, or 800ms of nothing. A step that genuinely goes nowhere still has to be
+      // measurable — that is a finding, not a reason to hang.
+      const moveBy = Math.min(Date.now() + 800, deadline);
+      while (Date.now() < moveBy && track.scrollLeft === start) await sleep(40);
+
+      // Stillness for 240ms, not for one sample. The rail's loop correction fires 140ms after
+      // the last scroll event and moves it by a whole block, so a single-sample test reports
+      // "settled" during that gap and every measurement after it is taken mid-teleport — which
+      // is what "next did not change the active slide" looked like at 1440.
+      let last = NaN;
+      let still = 0;
+      while (Date.now() < deadline) {
+        await sleep(60);
+        const now = track.scrollLeft;
+        still = now === last ? still + 1 : 0;
+        last = now;
+        if (still >= 4) return true;
+      }
+      return false;
+    },
+    [TRACK, timeout]
+  );
+
 console.log(`Expecting ${EXPECTED} slides (video files in ${FOLDER})\n`);
 
 for (const locale of ['en', 'ar']) {
@@ -234,7 +281,7 @@ for (const locale of ['en', 'ar']) {
       trail.push(visible.join('+') || '—');
       for (const index of visible) seen.add(index);
       await next.click({ timeout: 5000 }).catch(() => {});
-      await page.waitForTimeout(800);
+      await settle(page);
     }
     note(
       `   reached slides [${[...seen].sort((a, b) => a - b).join(', ')}] with next · steps ${trail.join(' → ')}`
@@ -301,7 +348,7 @@ for (const locale of ['en', 'ar']) {
 
     const beforeStep = await leadingEdge();
     await next.click({ timeout: 5000 }).catch(() => {});
-    await page.waitForTimeout(1400);
+    await settle(page);
     const afterStep = await leadingEdge();
     note(
       `   next: slide ${beforeStep?.index} → ${afterStep?.index}, active card sits ${afterStep?.offset}px from the leading edge`

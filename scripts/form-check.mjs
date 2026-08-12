@@ -237,7 +237,8 @@ for (const locale of ['en', 'ar']) {
     /* — structure — */
     check(`[${tag}] the form renders`, (await page.locator('form').count()) === 1);
 
-    for (const field of ['name', 'phone', 'area', 'setting', 'finish', 'notes', 'consent']) {
+    // No `finish`: the question was removed from the form on 2026-08-12.
+    for (const field of ['name', 'phone', 'area', 'setting', 'notes', 'consent']) {
       check(
         `[${tag}] field "${field}" is present`,
         (await page.locator(`[name="${field}"]`).count()) > 0

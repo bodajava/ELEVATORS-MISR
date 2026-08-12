@@ -28,8 +28,8 @@ export const projectsPage: {
   },
   heading: { en: 'Installations', ar: 'أعمال منفَّذة' },
   lede: {
-    en: 'Our own photographs, grouped by finish — the axis the work actually divides on. Descriptions cover what is visible in the frame; we publish no client names or addresses.',
-    ar: 'صورنا الخاصة، مرتّبة حسب التشطيب، وهو المحور الذي تنقسم عليه الأعمال فعلًا. تصف النصوص ما هو ظاهر في الصورة، ولا نَنشر أسماء العملاء ولا عناوينهم.',
+    en: 'Our own photographs, grouped by finish — the axis the work actually divides on. Descriptions cover what is visible in the frame; we publish no client names.',
+    ar: 'صورنا الخاصة، مرتّبة حسب التشطيب، وهو المحور الذي تنقسم عليه الأعمال فعلًا. تصف النصوص ما هو ظاهر في الصورة، ولا نَنشر أسماء العملاء.',
   },
   filterAll: { en: 'All finishes', ar: 'كل التشطيبات' },
   filterLabel: { en: 'Filter by finish', ar: 'تصفية حسب التشطيب' },

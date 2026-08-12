@@ -8,7 +8,6 @@ const base: InspectionRequest = {
   phone: '+201012345678',
   area: 'New Cairo',
   setting: 'villa',
-  finish: 'brass-glass',
   notes: '',
   consent: true,
   locale: 'en',
@@ -58,10 +57,10 @@ describe('lead notification HTML template', () => {
     expect(html).toContain('href="tel:+201012345678"');
   });
 
-  it("shows both languages for setting and finish regardless of the visitor's own locale", () => {
+  it("shows both languages for the setting regardless of the visitor's own locale", () => {
     const html = renderLeadEmailHtml(base, 'EE-4K7P-2QX9', submittedAt);
-    // villa / brass-glass in English and Arabic both appear — the reader should not need to
-    // guess which language the team member on duty prefers.
+    // The setting appears in English and Arabic both — the reader should not need to guess
+    // which language the team member on duty prefers.
     expect(html).toMatch(/Villa/);
     expect(html).toMatch(/فيلا/);
   });

@@ -32,7 +32,6 @@ export const issueKeys = [
   'area.required',
   'area.tooLong',
   'setting.invalid',
-  'finish.invalid',
   'notes.tooLong',
   'locale.invalid',
   'consent.required',
@@ -55,7 +54,6 @@ const messages: Record<IssueKey, Record<Locale, string>> = {
   'area.required': { en: 'Please tell us the area.', ar: 'من فضلك اذكر المنطقة.' },
   'area.tooLong': { en: 'That is longer than we need.', ar: 'النص أطول مما نحتاج.' },
   'setting.invalid': { en: 'Choose one of the options.', ar: 'اختر أحد الخيارات.' },
-  'finish.invalid': { en: 'Choose one of the options.', ar: 'اختر أحد الخيارات.' },
   'notes.tooLong': {
     en: 'Please keep this under 2000 characters.',
     ar: 'من فضلك اجعل النص أقل من ٢٠٠٠ حرف.',
@@ -75,15 +73,20 @@ export function messageFor(locale: Locale, key: string): string {
 /* ─────────────────────────────── field vocabulary ────────────────────────── */
 
 /**
- * Mirrors the vocabulary the projects content already uses, so a lead can be read against
- * the portfolio without a translation step. `unsure` exists because most visitors genuinely
- * are, and forcing a guess produces worse data than admitting it.
+ * What kind of building the lift is going into. `unsure` exists because most visitors
+ * genuinely are, and forcing a guess produces worse data than admitting it.
+ *
+ * `residence` ("Apartment building") was replaced by `factory` on the owner's instruction,
+ * 2026-08-12. The database enum still carries `residence` — rows recorded before that date
+ * hold it, and a Postgres enum value cannot be dropped without rewriting the column — but the
+ * form no longer offers it and the server no longer accepts it. See `src/lib/db/schema.ts`.
+ *
+ * There is no `finish` question any more. It was removed from the form on the same
+ * instruction; the column it used to write is documented in the database schema.
  */
-export const settings = ['villa', 'residence', 'commercial', 'unsure'] as const;
-export const finishes = ['brass-glass', 'smoked-glass', 'unsure'] as const;
+export const settings = ['villa', 'factory', 'commercial', 'unsure'] as const;
 
 export type Setting = (typeof settings)[number];
-export type Finish = (typeof finishes)[number];
 
 /* ──────────────────────────────── phone ──────────────────────────────────── */
 
@@ -147,7 +150,6 @@ export const inspectionRequestSchema = z.object({
   area: trimmed.pipe(z.string().min(1, 'area.required').max(120, 'area.tooLong')),
 
   setting: z.enum(settings, 'setting.invalid').default('unsure'),
-  finish: z.enum(finishes, 'finish.invalid').default('unsure'),
 
   notes: trimmed.pipe(z.string().max(2000, 'notes.tooLong')).default(''),
 

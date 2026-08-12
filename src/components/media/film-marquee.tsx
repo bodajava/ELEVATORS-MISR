@@ -184,14 +184,19 @@ export function FilmMarquee({
           role="group"
           aria-label={labels.group}
           style={{
-            ['--film-h' as string]: 'clamp(180px, 26vh, 280px)',
+            ['--film-h' as string]: 'clamp(200px, 26vh, 280px)',
             // The footage dissolves into the glass at both ends instead of being guillotined
             // by the trough edge. Logical-agnostic: it is symmetric, so RTL needs nothing.
             maskImage:
-              'linear-gradient(to right, transparent, #000 4.5rem, #000 calc(100% - 4.5rem), transparent)',
+              'linear-gradient(to right, transparent, #000 var(--film-fade), #000 calc(100% - var(--film-fade)), transparent)',
           }}
           className={[
             'group overflow-hidden rounded-[1.4rem]',
+            // The fade is a proportion of the trough, and 4.5rem is only a small one on a
+            // desktop. Inside a 334px trough on a phone it dissolved 144px — 43% of everything
+            // on screen — so the band read as one clip with both ends washed out. 1.5rem is
+            // the same gesture at the width it actually has to work in.
+            '[--film-fade:1.5rem] sm:[--film-fade:4.5rem]',
             // Reduced motion: no travel, and the band becomes a plain scrollable strip so the
             // same films are still reachable by hand.
             'motion-reduce:snap-x motion-reduce:scrollbar-none motion-reduce:overflow-x-auto',

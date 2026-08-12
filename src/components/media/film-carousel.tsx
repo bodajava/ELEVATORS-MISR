@@ -327,18 +327,19 @@ export function FilmCarousel({
             step(-1);
           }
         }}
-        style={{
-          // One shared frame height; each card is as wide as its own ratio needs, which is the
-          // only way to mix portrait and landscape without letterboxing. Taller than it was:
-          // the rail is now a wide band rather than a compact strip, and the frame has to grow
-          // with it or four 9:16 cards could never span it.
-          // The floor is what a 320px phone gets, and it is set so that *two* cards plus the
-          // gap still fit across it: at a 260px frame only one 9:16 card fits, the peek that
-          // says the rail continues disappears, and a step the auto-advance happens to double
-          // up skips a film entirely rather than merely passing it quickly.
-          ['--card-h' as string]: 'clamp(210px, 36vw, 480px)',
-        }}
         className={[
+          // One shared frame height; each card is as wide as its own ratio needs, which is the
+          // only way to mix portrait and landscape without letterboxing.
+          //
+          // Two expressions, not one, because a phone and a desktop are sizing this from
+          // different constraints. `36vw` alone was a desktop rule applied everywhere: on a
+          // 390px screen it fell to the 210px floor, and a 9:16 film at a 210px frame is a
+          // **118px-wide card** — a matchbox, three and a half of them across the screen, with
+          // a presenter's face too small to read. Below `sm` the height is driven from the
+          // viewport width instead (a 9:16 card at ~58vw of width needs ~103vw of height), so
+          // one film leads and the next one peeks. From `sm` the original desktop rule
+          // returns unchanged.
+          '[--card-h:clamp(300px,103vw,440px)] sm:[--card-h:clamp(210px,36vw,480px)]',
           'flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-1 sm:gap-4',
           // Bleeds past the gutter so the next card peeks — the affordance that says the rail
           // continues, without a control to say it.
@@ -410,11 +411,10 @@ export function FilmCarousel({
                   />
                 )}
 
-                {/* Hidden on the narrowest cards. These are 9:16 films, so a card is ~124px
-                    wide on a phone and the badge wrapped to two lines across the frame. The
-                    lede above already says the films are Arabic and carry sound, so nothing
-                    is lost by dropping it there. */}
-                <span className="absolute start-2.5 top-2.5 z-10 hidden rounded-(--radius-control) bg-carbon/70 px-2 py-0.5 text-2xs whitespace-nowrap text-ink-on-dark sm:inline-block">
+                {/* This used to be hidden below `sm`, because a phone card was ~124px wide and
+                    the badge wrapped to two lines across the frame. The phone card is ~226px
+                    now and the badge sits on one line inside it, so it shows everywhere. */}
+                <span className="absolute start-2.5 top-2.5 z-10 inline-block rounded-(--radius-control) bg-carbon/70 px-2 py-0.5 text-2xs whitespace-nowrap text-ink-on-dark">
                   {film.badge}
                 </span>
 

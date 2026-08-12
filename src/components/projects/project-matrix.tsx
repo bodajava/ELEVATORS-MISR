@@ -234,7 +234,9 @@ export function ProjectMatrix({
                   aria-hidden
                   className={cn(
                     'pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-carbon/90 via-carbon/50 to-transparent',
-                    wide ? 'h-3/5' : 'h-2/5'
+                    // The narrow cell's scrim grew from 2/5 to 1/2 when its title stopped
+                    // truncating: a two-line title needs ground under both lines.
+                    wide ? 'h-3/5' : 'h-1/2'
                   )}
                 />
 
@@ -247,7 +249,11 @@ export function ProjectMatrix({
                       'font-display text-ink-on-dark drop-shadow-[0_1px_6px_rgba(0,0,0,0.7)]',
                       wide
                         ? 'max-w-[18ch] text-2xl text-balance sm:text-3xl lg:text-4xl'
-                        : 'truncate text-sm sm:text-base'
+                        : // Two lines, not one truncated line. A narrow cell is ~187px on a
+                          // phone, and the titles now carry compound names — «كومباوند
+                          // المخابرات — الديار» was being cut after the first word, which
+                          // named nothing. `text-balance` keeps the two lines even.
+                          'line-clamp-2 text-sm text-balance sm:text-base'
                     )}
                   >
                     {project.title[locale]}

@@ -533,12 +533,51 @@
    Arabic corrections — unlayered so they win over utilities
    ========================================================================== */
 
+/* The Arabic page redefines the type variables themselves.
+
+   `--font-display` is `Bricolage, "Bricolage Fallback", Alexandria, …`, and the middle entry
+   is the metric-adjusted local face `next/font` generates — on macOS and Windows that resolves
+   to **Arial**, which covers Arabic. So every element carrying the `font-display` or `font-sans`
+   utility rendered Arabic in Arial: project titles, the ascent heading, film titles, buttons.
+   The `:lang(ar) h1…h4` rule below could not save them, because a Tailwind utility outranks it.
+
+   Redefining the variables under `:lang(ar)` fixes all of them at once and needs no
+   specificity fight: any utility that reads `var(--font-display)` now reads Alexandria first.
+   Latin text on the Arabic page (a reference code, a stat) keeps its own faces through the
+   `[dir='ltr']` and `.font-mono` exceptions below. */
+:lang(ar) {
+  --font-display: var(--font-arabic), system-ui, sans-serif;
+  --font-body: var(--font-arabic), system-ui, sans-serif;
+  /* Latin digits and codes stay monospaced; Arabic words in the annotation layer fall to
+     Alexandria rather than to Arial. */
+  --font-mono: var(--font-mono-latin), var(--font-arabic), ui-monospace, monospace;
+}
+
+/* Reference codes, floor markers and counters are marked `dir="ltr"` because they are read
+   and typed back as Latin. They keep the full mono stack. */
+:lang(ar) [dir='ltr'] {
+  --font-mono: var(--font-mono-latin), ui-monospace, monospace;
+}
+
 :lang(ar) {
   letter-spacing: normal;
 }
 
 :lang(ar) {
   text-transform: none;
+}
+
+/* Leading, and why it has to be unlayered too.
+
+   The size utilities carry a line-height with them (`text-4xl` is 1.08), and they overrode the
+   `:lang(ar)` heading rule in the base layer. Latin capitals are happy at 1.08; Arabic is not —
+   Alexandria hangs tashkeel above the letter, so at that leading the shadda in «سجل موثّق»
+   collided with the line above it. 1.45 clears the marks at every size the page uses. */
+:lang(ar) h1,
+:lang(ar) h2,
+:lang(ar) h3,
+:lang(ar) h4 {
+  line-height: 1.45;
 }
 
 /* ==========================================================================

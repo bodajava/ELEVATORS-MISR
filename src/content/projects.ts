@@ -3,13 +3,17 @@ import type { Locale } from '@/i18n/config';
 /**
  * Installation records.
  *
- * Every description here states only what is **visibly verifiable in the photograph**:
- * finish, setting, materials in frame, how the car sits in the architecture.
+ * Every description here states either what is **visibly verifiable in the photograph** —
+ * finish, setting, materials in frame, how the car sits in the architecture — or a fact the
+ * owner supplied directly.
  *
- * Deliberately absent, because none of it can be verified from the supplied material:
- * client names, addresses, cities, floor counts, travel heights, load ratings, speeds,
- * drive types, glass specifications, standards compliance, dates, and durations.
- * See docs/content-guide.md.
+ * Four records carry an owner-supplied compound name, stop count or car capacity, given on
+ * 2026-08-12 and flagged with `ownerSupplied` below. Those are the only statements here that
+ * cannot be read off the photograph, and each is printed as it was given.
+ *
+ * Still absent everywhere, because none of it has been supplied or can be verified: individual
+ * client names, street addresses, travel heights, load ratings, speeds, glass specifications,
+ * standards compliance, dates and durations. See docs/content-guide.md.
  */
 
 export type Finish = 'brass' | 'smoked-glass';
@@ -25,6 +29,12 @@ export type Project = {
   order: number;
   /** Show on the homepage's selected-work section. */
   featured: boolean;
+  /**
+   * Set where the title or summary carries a fact the owner supplied rather than one read off
+   * the photograph — a compound name, a stop count, a car capacity. Provenance, so a later
+   * reader can tell the two kinds of statement apart without reopening the images.
+   */
+  ownerSupplied?: true;
   title: Record<Locale, string>;
   /** One line for cards. */
   summary: Record<Locale, string>;
@@ -70,13 +80,14 @@ export const projects: readonly Project[] = [
     setting: 'residence',
     order: 2,
     featured: true,
+    ownerSupplied: true,
     title: {
-      en: 'Smoked glass against a garden wall',
-      ar: 'زجاج مدخّن أمام جدار الحديقة',
+      en: 'Katameya Heights compound',
+      ar: 'كومباوند قطامية هايتس',
     },
     summary: {
-      en: 'A dark glass car in a contemporary interior, set where the garden glazing meets the stair.',
-      ar: 'كابينة من الزجاج الداكن في مساحة معاصرة، حيث يلتقي زجاج الحديقة بالدرج.',
+      en: 'A fully panoramic elevator, three-person car — set where the garden glazing meets the stair.',
+      ar: 'مصعد بانوراما بالكامل، ثلاثة راكب — حيث يلتقي زجاج الحديقة بالدرج.',
     },
     body: {
       en: [
@@ -99,13 +110,14 @@ export const projects: readonly Project[] = [
     setting: 'villa',
     order: 3,
     featured: true,
+    ownerSupplied: true,
     title: {
-      en: 'A faceted car on parquet',
-      ar: 'كابينة متعددة الأوجه فوق الباركيه',
+      en: 'Al Mukhabarat compound — Al Diyar',
+      ar: 'كومباوند المخابرات — الديار',
     },
     summary: {
-      en: 'A multi-sided brass and glass car opening onto the main salon.',
-      ar: 'كابينة نحاسية زجاجية متعددة الأضلاع تطل على الصالون الرئيسي.',
+      en: 'A fully panoramic elevator with four stops, in New Cairo — a multi-sided brass and glass car opening onto the main salon.',
+      ar: 'مصعد بانوراما بالكامل، أربع وقفات — التجمع الخامس. كابينة نحاسية زجاجية متعددة الأضلاع تطل على الصالون الرئيسي.',
     },
     body: {
       en: [
@@ -128,13 +140,14 @@ export const projects: readonly Project[] = [
     setting: 'villa',
     order: 4,
     featured: true,
+    ownerSupplied: true,
     title: {
-      en: 'Beside a dark timber stair',
-      ar: 'بجوار درج من الخشب الداكن',
+      en: 'Atrio compound — Sheikh Zayed',
+      ar: 'كومباوند أتريو — الشيخ زايد',
     },
     summary: {
-      en: 'Champagne-toned glass held in brass, wrapped by a dark timber and black marble stair.',
-      ar: 'زجاج بلون الشمبانيا داخل إطار نحاسي، يحيط به درج من الخشب الداكن والرخام الأسود.',
+      en: 'A fully transparent glass elevator with three stops, wrapped by a dark timber and black marble stair.',
+      ar: 'مصعد زجاجي شفاف بالكامل، ثلاث وقفات، يحيط به درج من الخشب الداكن والرخام الأسود.',
     },
     body: {
       en: [
@@ -157,13 +170,14 @@ export const projects: readonly Project[] = [
     setting: 'villa',
     order: 5,
     featured: true,
+    ownerSupplied: true,
     title: {
-      en: 'Warm glass on pale marble',
-      ar: 'زجاج دافئ على رخام فاتح',
+      en: 'Villa SODIC compound — New Cairo',
+      ar: 'كومباوند فيلا سوديك — التجمع الخامس',
     },
     summary: {
-      en: 'A faceted brass car in a pale marble hall lit by wall sconces.',
-      ar: 'كابينة نحاسية متعددة الأوجه في بهو من الرخام الفاتح تضيئه أباجورات جدارية.',
+      en: 'A transparent gold hydraulic elevator, in a pale marble hall lit by wall sconces.',
+      ar: 'مصعد ذهبي شفاف، هيدروليكي، في بهو من الرخام الفاتح تضيئه أباجورات جدارية.',
     },
     body: {
       en: [
