@@ -1,6 +1,8 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+
+import { motionTier, watchMotionTier } from '@/lib/motion-capability';
 
 /**
  * The ambient field — one shared background and cursor system for the whole site.
@@ -24,12 +26,21 @@ import { useEffect, useRef } from 'react';
  * Everything it animates is `transform` and `opacity`, so nothing it does can trigger layout
  * or contribute to CLS. The whole thing is `pointer-events: none` and `aria-hidden`.
  *
- * ── When it does nothing ────────────────────────────────────────────────────
- *  · `prefers-reduced-motion: reduce` — the forms are painted once, statically. The page
- *    still gets an atmosphere; nothing moves and no loop runs.
- *  · Coarse pointer (touch) — no cursor at all, and the loop only handles scroll parallax,
- *    which is cheap. A pointer-follow background on a phone is spent battery.
- *  · Document hidden — the loop stops entirely and restarts on `visibilitychange`.
+ * ── What it costs, by device ────────────────────────────────────────────────
+ * The tier comes from `motionTier()` — see `src/lib/motion-capability.ts` for how it is
+ * decided and why it is decided in one place.
+ *
+ *  · `full` — fine pointer, capable device. The loop below runs: drift, pointer lean, scroll
+ *    parallax, the light, and both halves of the cursor.
+ *  · `ambient` — touch. **No loop at all.** The forms drift on a CSS animation the compositor
+ *    owns, and there is no cursor to draw. The rAF loop used to run here too, for a scroll
+ *    parallax nobody had asked for: measured on a 390px viewport it was one of two loops
+ *    keeping the main thread busy 184 times a second on pages with nothing moving on them.
+ *  · `static` — reduced motion, Save-Data, or a device reporting very little memory or very
+ *    few cores. Painted once. Nothing moves, nothing loops, no listeners are attached.
+ *
+ * Document hidden stops the loop entirely in every tier that has one, and it restarts on
+ * `visibilitychange`.
  */
 /**
  * Where the four drifting forms sit and how hard they fall off.
@@ -38,10 +49,33 @@ import { useEffect, useRef } from 'react';
  * so the two themes tune the field without the component knowing which one is active.
  */
 const FORMS = [
-  { position: 'start-[8%] top-[12%] h-[52vmin] w-[52vmin]', origin: '35% 35%', falloff: '68%' },
-  { position: 'start-[58%] top-[4%] h-[46vmin] w-[46vmin]', origin: '50% 50%', falloff: '70%' },
-  { position: 'start-[24%] top-[58%] h-[62vmin] w-[62vmin]', origin: '45% 45%', falloff: '72%' },
-  { position: 'start-[68%] top-[62%] h-[38vmin] w-[38vmin]', origin: '50% 50%', falloff: '70%' },
+  // `drift` is the CSS animation's duration and delay for the touch tier — four different
+  // pairs, so the forms never line up and slide as one sheet. Unused in the `full` tier,
+  // where the loop drives them, and inert in `static`.
+  {
+    position: 'start-[8%] top-[12%] h-[52vmin] w-[52vmin]',
+    origin: '35% 35%',
+    falloff: '68%',
+    drift: { duration: '34s', delay: '0s' },
+  },
+  {
+    position: 'start-[58%] top-[4%] h-[46vmin] w-[46vmin]',
+    origin: '50% 50%',
+    falloff: '70%',
+    drift: { duration: '41s', delay: '-7s' },
+  },
+  {
+    position: 'start-[24%] top-[58%] h-[62vmin] w-[62vmin]',
+    origin: '45% 45%',
+    falloff: '72%',
+    drift: { duration: '47s', delay: '-15s' },
+  },
+  {
+    position: 'start-[68%] top-[62%] h-[38vmin] w-[38vmin]',
+    origin: '50% 50%',
+    falloff: '70%',
+    drift: { duration: '38s', delay: '-23s' },
+  },
 ] as const;
 
 export function AmbientField() {
@@ -53,21 +87,29 @@ export function AmbientField() {
   const gridRef = useRef<HTMLDivElement>(null);
   const gridInnerRef = useRef<HTMLDivElement>(null);
 
+  /**
+   * Bumped whenever the device's motion tier changes, which re-runs the effect below.
+   *
+   * Both inputs are live: reduced motion can be switched on in system settings without a
+   * reload, and a hybrid device gains a trackpad when it is docked. Without this the field
+   * would keep whatever tier it happened to be given at mount.
+   */
+  const [tierChanges, setTierChanges] = useState(0);
+  useEffect(() => watchMotionTier(() => setTierChanges((n) => n + 1)), []);
+
   useEffect(() => {
     const root = rootRef.current;
     if (!root) return;
 
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const fine = window.matchMedia('(pointer: fine)');
+    const tier = motionTier();
+    root.dataset.state = tier === 'full' ? 'live' : tier;
 
-    // Reduced motion: paint the field once and stop. No loop, no listeners, no cursor.
-    if (reduced.matches) {
-      root.dataset.state = 'static';
-      return;
-    }
+    // `static` paints once and stops; `ambient` hands the drift to a CSS animation declared
+    // against `[data-ambient][data-state='ambient']`. Neither attaches a listener or starts a
+    // loop, so both leave the main thread completely free after paint.
+    if (tier !== 'full') return;
 
-    const hasCursor = fine.matches;
-    root.dataset.state = hasCursor ? 'live' : 'ambient';
+    const hasCursor = true;
 
     // Pointer position, in normalised -1..1 space. Refs, never state.
     const target = { x: 0, y: 0 };
@@ -197,7 +239,7 @@ export function AmbientField() {
       window.removeEventListener('scroll', onScroll);
       document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, []);
+  }, [tierChanges]);
 
   return (
     <div
@@ -222,6 +264,8 @@ export function AmbientField() {
           style={{
             background: `radial-gradient(circle at ${form.origin}, var(--ambient-${i + 1}) 0%, transparent ${form.falloff})`,
             opacity: `var(--ambient-${i + 1}-opacity)`,
+            ['--ambient-drift-duration' as string]: form.drift.duration,
+            ['--ambient-drift-delay' as string]: form.drift.delay,
           }}
         />
       ))}

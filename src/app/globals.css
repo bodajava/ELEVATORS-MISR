@@ -812,6 +812,33 @@
   display: block;
 }
 
+/* The touch tier's drift, handed to the compositor.
+
+   On a phone the field used to be moved by the same requestAnimationFrame loop the desktop
+   uses, for a scroll parallax and a pointer lean that a finger cannot produce — measured, one
+   of the two loops that kept the main thread busy 184 times a second on routes with nothing
+   animating on them. The same slow travel is a keyframe here instead: no main-thread work at
+   all, and the browser drops it on its own when the tab is hidden.
+
+   Four forms, four durations, four delays, so they never line up into one sliding sheet. The
+   distances are small on purpose — this is light shifting, not objects moving. */
+@media (prefers-reduced-motion: no-preference) {
+  [data-ambient][data-state='ambient'] span {
+    animation: ambient-drift var(--ambient-drift-duration, 34s) ease-in-out
+      var(--ambient-drift-delay, 0s) infinite alternate;
+    will-change: transform;
+  }
+}
+
+@keyframes ambient-drift {
+  from {
+    transform: translate3d(-2.2vmin, -1.6vmin, 0);
+  }
+  to {
+    transform: translate3d(2.2vmin, 1.6vmin, 0);
+  }
+}
+
 /* ==========================================================================
    Bottom navigation clearance
    The mobile bar floats over the page, so the document reserves exactly its height

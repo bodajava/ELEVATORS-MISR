@@ -1,7 +1,7 @@
 import 'server-only';
 import { Redis } from '@upstash/redis';
 
-import { isRedisConfigured, upstashRedisRestToken, upstashRedisRestUrl } from '@/lib/env';
+import { redisConfigStatus } from '@/lib/env';
 
 /**
  * The shared Upstash Redis client — one instance, constructed lazily, reused everywhere a
@@ -33,17 +33,24 @@ let client: Redis | null | undefined;
 export function getRedis(): Redis | null {
   if (client !== undefined) return client;
 
-  if (!isRedisConfigured()) {
+  const status = redisConfigStatus();
+
+  if (status.state === 'absent') {
+    client = null;
+    return client;
+  }
+
+  // Shaped wrong — the common case being a `redis://` string from the wrong tab of the Upstash
+  // console. Said once, plainly, with the fix in it, rather than left for `new Redis()` to
+  // throw about. `scripts/preflight.mjs` fails a production deployment on the same condition.
+  if (status.state === 'invalid') {
+    console.error(`[redis] ${status.reason} — falling back as if unconfigured.`);
     client = null;
     return client;
   }
 
   try {
-    client = new Redis({
-      // Non-null: `isRedisConfigured()` above already confirmed both are set.
-      url: upstashRedisRestUrl()!,
-      token: upstashRedisRestToken()!,
-    });
+    client = new Redis({ url: status.url, token: status.token });
   } catch (error) {
     console.error(
       '[redis] UPSTASH_REDIS_REST_URL/TOKEN are set but invalid — falling back as if unconfigured:',

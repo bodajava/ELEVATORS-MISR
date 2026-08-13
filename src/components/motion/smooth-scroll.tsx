@@ -1,9 +1,10 @@
 'use client';
 
 import Lenis from 'lenis';
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 
 import { ScrollTrigger, gsap } from '@/lib/gsap';
+import { motionTier, watchMotionTier } from '@/lib/motion-capability';
 
 /**
  * Smooth scroll, synchronised with ScrollTrigger.
@@ -19,14 +20,29 @@ import { ScrollTrigger, gsap } from '@/lib/gsap';
  *   3. `gsap.ticker.lagSmoothing(0)` — GSAP normally absorbs frame spikes by fudging time,
  *      which desynchronises it from the (unfudged) scroll position.
  *
- * Reduced motion: Lenis is never constructed at all. Smooth scrolling is itself motion, and
- * hijacking the scroll of someone who asked for less of it is the wrong call — the page falls
- * back to native scrolling and every ScrollTrigger still works.
+ * ── Where it runs, and where it does not ───────────────────────────────────
+ * Only in the `full` motion tier — a fine pointer, no stated preference against motion, and no
+ * constrained-device signal. See `src/lib/motion-capability.ts`.
+ *
+ * Reduced motion: never constructed. Smooth scrolling is itself motion, and hijacking the
+ * scroll of someone who asked for less of it is the wrong call — the page falls back to native
+ * scrolling and every ScrollTrigger still works.
+ *
+ * Touch: also never constructed, and this one was costing real battery. `syncTouch: false`
+ * means Lenis was already declining to smooth touch scrolling — so on a phone it smoothed
+ * nothing, while `gsap.ticker.add(tick)` still called `lenis.raf()` on every single frame for
+ * the life of the page. Measured on a 390px viewport, that was one of the two loops keeping
+ * the main thread busy 184 times a second on routes with nothing animating on them. Native
+ * scrolling on touch is what the visitor was getting either way.
  */
 export function SmoothScroll({ children }: { children: ReactNode }) {
+  // Re-evaluated when the tier changes: reduced motion is a live system setting, and a hybrid
+  // device gains a trackpad when it is docked.
+  const [tierChanges, setTierChanges] = useState(0);
+  useEffect(() => watchMotionTier(() => setTierChanges((n) => n + 1)), []);
+
   useEffect(() => {
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-    if (reduceMotion.matches) return;
+    if (motionTier() !== 'full') return;
 
     const lenis = new Lenis({
       // Slightly longer than default: the site is about controlled vertical travel, and a
@@ -58,7 +74,7 @@ export function SmoothScroll({ children }: { children: ReactNode }) {
       gsap.ticker.lagSmoothing(500, 33);
       lenis.destroy();
     };
-  }, []);
+  }, [tierChanges]);
 
   return <>{children}</>;
 }

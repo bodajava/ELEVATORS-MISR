@@ -101,7 +101,74 @@ export const isLeadNotificationConfigured = () =>
 export const upstashRedisRestUrl = () => read('UPSTASH_REDIS_REST_URL');
 export const upstashRedisRestToken = () => read('UPSTASH_REDIS_REST_TOKEN');
 
-export const isRedisConfigured = () =>
-  upstashRedisRestUrl() !== null && upstashRedisRestToken() !== null;
+/**
+ * Why this is checked for *shape* and not merely for presence.
+ *
+ * `UPSTASH_REDIS_REST_URL` has to be an HTTPS origin. The Upstash console shows two different
+ * credentials on two different tabs, and the one people reach for first is the wrong one: a
+ * `redis://` connection string, or the whole `redis-cli --tls -u redis://…` command with the
+ * binary name still attached. Both are non-empty strings, so a presence check passes them, and
+ * the failure then surfaces at the worst possible moment — `new Redis()` throws synchronously,
+ * which once took the entire server down at startup (see `src/lib/redis/client.ts`).
+ *
+ * Checking the shape here turns that into something a deployment preflight can catch, and it
+ * is the difference between "distributed rate limiting is off" being a decision and being an
+ * accident: in production, an invalid value must fail loudly rather than quietly degrade to
+ * the in-memory limiter, which protects one instance out of however many are running.
+ */
+export type RedisConfigStatus =
+  | { state: 'absent' }
+  | { state: 'valid'; url: string; token: string }
+  | { state: 'invalid'; reason: string };
+
+export function redisConfigStatus(): RedisConfigStatus {
+  const url = upstashRedisRestUrl();
+  const token = upstashRedisRestToken();
+
+  if (url === null && token === null) return { state: 'absent' };
+  if (url === null) return { state: 'invalid', reason: 'UPSTASH_REDIS_REST_URL is not set' };
+  if (token === null) return { state: 'invalid', reason: 'UPSTASH_REDIS_REST_TOKEN is not set' };
+
+  if (/^redis(s)?:\/\//i.test(url)) {
+    return {
+      state: 'invalid',
+      reason:
+        'UPSTASH_REDIS_REST_URL is a redis:// connection string. That is the TCP credential ' +
+        'for a different client. Use the HTTPS endpoint from the database’s "REST API" tab.',
+    };
+  }
+  if (/\s/.test(url)) {
+    return {
+      state: 'invalid',
+      reason:
+        'UPSTASH_REDIS_REST_URL contains whitespace — it looks like a shell command was ' +
+        'pasted rather than the URL on its own.',
+    };
+  }
+
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return { state: 'invalid', reason: `UPSTASH_REDIS_REST_URL is not a URL: ${url}` };
+  }
+  if (parsed.protocol !== 'https:') {
+    return {
+      state: 'invalid',
+      reason: `UPSTASH_REDIS_REST_URL must be https://, got ${parsed.protocol}//`,
+    };
+  }
+
+  return { state: 'valid', url, token };
+}
+
+/**
+ * True only when Redis is configured **and** the configuration is shaped correctly.
+ *
+ * An invalid value reads as unconfigured here so that no caller has to think about it: the
+ * in-memory fallbacks are already correct for a single instance, and `redisConfigStatus()`
+ * plus the preflight are where a broken value gets reported.
+ */
+export const isRedisConfigured = () => redisConfigStatus().state === 'valid';
 
 export const isProduction = () => process.env.NODE_ENV === 'production';
