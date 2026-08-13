@@ -18,6 +18,7 @@
     "preflight:prod": "node scripts/preflight.mjs --production",
     "csp:check": "node scripts/csp-check.mjs",
     "perf:baseline": "node scripts/baseline.mjs",
+    "leads:unsent": "node scripts/unsent-notifications.mjs",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",

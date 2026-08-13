@@ -10,6 +10,7 @@ import {
 } from '@/lib/env';
 import { renderLeadEmailHtml, renderLeadEmailText } from '@/lib/email/lead-notification-template';
 import type { InspectionRequest } from '@/lib/inspection/schema';
+import { getInspectionStore } from '@/lib/db/inspection-repository';
 import { getRedis } from '@/lib/redis/client';
 import { randomToken } from '@/lib/security/random';
 
@@ -61,8 +62,78 @@ function getTransporter(): Transporter {
   transporter ??= nodemailer.createTransport({
     service: 'gmail',
     auth: { user, pass },
+    // Bounded, because this send is awaited inside the visitor's own submission — see the
+    // call site in `actions.ts` and the deadline below. Nodemailer's defaults are two minutes
+    // for the socket and no limit at all on the greeting, so a Gmail endpoint that accepts a
+    // TCP connection and then says nothing would hold the visitor on a spinner until their
+    // browser gave up, for a lead that was already safely in the database.
+    connectionTimeout: 8_000,
+    greetingTimeout: 8_000,
+    socketTimeout: 10_000,
   });
   return transporter;
+}
+
+/**
+ * How long the whole notification may take, retries included, before the visitor is answered.
+ *
+ * The email is not what the visitor is waiting for — their request is already written. This is
+ * the outer bound on how long they wait for something that does not concern them, and it is
+ * deliberately shorter than the sum of the transport timeouts above: whichever fires first,
+ * the submission resolves.
+ */
+const SEND_DEADLINE_MS = 12_000;
+
+/** Attempts, and the pause before each retry. Bounded by `SEND_DEADLINE_MS` regardless. */
+const SEND_ATTEMPTS = 2;
+const RETRY_BACKOFF_MS = 600;
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Send, retrying once on a transient failure, and give up at the deadline either way.
+ *
+ * Retrying is worth doing because the failures this hits are overwhelmingly transient — a
+ * refused connection, a socket reset, a 4xx greeting from a busy Gmail endpoint. Retrying
+ * *twice* is not: a wrong App Password fails identically every time, and the second attempt
+ * only spends the visitor's patience proving it.
+ *
+ * Returns what happened, so the caller can record it. Never throws.
+ */
+async function sendWithRetry(
+  send: () => Promise<unknown>
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const deadline = Date.now() + SEND_DEADLINE_MS;
+  let last = 'unknown';
+
+  for (let attempt = 1; attempt <= SEND_ATTEMPTS; attempt += 1) {
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) return { ok: false, error: `${last} (deadline)` };
+
+    try {
+      // The transport's own timeouts should fire first; this is the backstop for the case
+      // where they do not, so the promise cannot outlive the request that is awaiting it.
+      await Promise.race([
+        send(),
+        sleep(remaining).then(() => {
+          throw new Error('SendDeadlineExceeded');
+        }),
+      ]);
+      return { ok: true };
+    } catch (error) {
+      // The class only. An SMTP error can quote the envelope back, and the envelope carries
+      // the recipient address; a transport error can quote the connection URL.
+      last = (error as Error)?.name || 'Error';
+      const code = (error as { code?: string })?.code;
+      if (code) last = `${last} (${code})`;
+
+      if (attempt < SEND_ATTEMPTS && Date.now() + RETRY_BACKOFF_MS < deadline) {
+        await sleep(RETRY_BACKOFF_MS);
+      }
+    }
+  }
+
+  return { ok: false, error: last };
 }
 
 /** Redis TTL for the dedupe claim — generous, since the cost of a false negative (letting a
@@ -91,21 +162,42 @@ async function claimNotification(reference: string): Promise<boolean> {
 }
 
 export async function notifyLead(request: InspectionRequest, reference: string): Promise<void> {
+  // Not configured is not a failure, and must not be recorded as one — a deployment that has
+  // deliberately not set up email would otherwise fill the unsent report with every lead it
+  // ever took.
   if (!isLeadNotificationConfigured()) return;
   if (!(await claimNotification(reference))) return;
 
   const submittedAt = new Date();
 
-  try {
-    await getTransporter().sendMail({
+  const outcome = await sendWithRetry(() =>
+    getTransporter().sendMail({
       from: `"${brand.name}" <${gmailUser()}>`,
       // Non-null: `isLeadNotificationConfigured()` above already confirmed this is set.
       to: leadNotificationEmail()!,
       subject: `New site inspection request — ${reference}`,
       text: renderLeadEmailText(request, reference, submittedAt),
       html: renderLeadEmailHtml(request, reference, submittedAt),
-    });
+    })
+  );
+
+  if (!outcome.ok) {
+    console.error(`[inspection] lead notification failed for ${reference}: ${outcome.error}`);
+  }
+
+  // Recorded against the row so an operator can find the leads nobody was told about — see
+  // `scripts/unsent-notifications.mjs`. Best-effort in its own right: a failure to write the
+  // *outcome* must not turn into a visitor-facing error either, so this swallows too. The
+  // lead itself is already durable; this is bookkeeping about the email.
+  try {
+    await getInspectionStore().recordNotification(
+      reference,
+      outcome.ok ? { sentAt: new Date() } : { error: outcome.error }
+    );
   } catch (error) {
-    console.error('[inspection] lead notification failed to send:', (error as Error)?.name);
+    console.error(
+      `[inspection] could not record the notification outcome for ${reference}:`,
+      (error as Error)?.name
+    );
   }
 }

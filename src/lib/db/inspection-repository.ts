@@ -1,4 +1,5 @@
 import 'server-only';
+import { eq } from 'drizzle-orm';
 
 import { DatabaseNotConfiguredError, getDb } from '@/lib/db/client';
 import { inspectionRequests, type InspectionRequestRow } from '@/lib/db/schema';
@@ -24,6 +25,18 @@ import type { InspectionRequest } from '@/lib/inspection/schema';
 export interface InspectionStore {
   create(request: InspectionRequest): Promise<{ reference: string; createdAt: Date }>;
   findByReference(reference: string): Promise<InspectionRequestRow | null>;
+  /**
+   * Record what happened to this row's notification email.
+   *
+   * Called after the send resolves, one way or the other, so a lead nobody was told about is
+   * distinguishable from one they were — see `scripts/unsent-notifications.mjs`. Never throws
+   * for a row that does not exist: the caller is in a best-effort path and a missing row is
+   * not worth a second failure.
+   */
+  recordNotification(
+    reference: string,
+    outcome: { sentAt: Date } | { error: string }
+  ): Promise<void>;
 }
 
 /** How many times to retry a reference collision before giving up. */
@@ -77,6 +90,18 @@ const postgresStore: InspectionStore = {
     });
     return rows[0] ?? null;
   },
+
+  async recordNotification(reference, outcome) {
+    const db = getDb();
+    await db
+      .update(inspectionRequests)
+      .set(
+        'sentAt' in outcome
+          ? { notifiedAt: outcome.sentAt, notificationError: null, updatedAt: new Date() }
+          : { notifiedAt: null, notificationError: outcome.error, updatedAt: new Date() }
+      )
+      .where(eq(inspectionRequests.reference, reference));
+  },
 };
 
 /** PostgreSQL unique-violation SQLSTATE, surfaced by the `postgres` driver as `code`. */
@@ -113,6 +138,8 @@ const memoryStore: InspectionStore = {
       locale: request.locale,
       consentedAt: now,
       status: 'new',
+      notifiedAt: null,
+      notificationError: null,
       createdAt: now,
       updatedAt: now,
     });
@@ -127,6 +154,17 @@ const memoryStore: InspectionStore = {
 
   async findByReference(reference) {
     return memoryRows.get(reference) ?? null;
+  },
+
+  async recordNotification(reference, outcome) {
+    const row = memoryRows.get(reference);
+    if (!row) return;
+    memoryRows.set(reference, {
+      ...row,
+      notifiedAt: 'sentAt' in outcome ? outcome.sentAt : null,
+      notificationError: 'sentAt' in outcome ? null : outcome.error,
+      updatedAt: new Date(),
+    });
   },
 };
 

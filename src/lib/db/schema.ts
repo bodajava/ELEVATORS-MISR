@@ -91,6 +91,22 @@ export const inspectionRequests = pgTable(
 
     status: inspectionStatus('status').notNull().default('new'),
 
+    /**
+     * When the team's notification email for this row was accepted by the SMTP server.
+     *
+     * Null means it has not been sent — which covers three different situations that an
+     * operator needs to be able to tell apart, so `notificationError` carries the reason:
+     * notification is switched off entirely (null error), the send failed (an error class),
+     * or it has not been attempted yet. Without this column a failed send left no trace
+     * anywhere except a log line, and a lead nobody was told about is indistinguishable from
+     * one they were. `scripts/unsent-notifications.mjs` reads exactly these two columns.
+     *
+     * The email itself is never stored — not the body, not the recipient, not the payload.
+     */
+    notifiedAt: timestamp('notified_at', { withTimezone: true }),
+    /** The failure's class, e.g. `Error (ETIMEDOUT)`. Never a message, never an address. */
+    notificationError: text('notification_error'),
+
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
