@@ -174,8 +174,34 @@ export const experienceStatement: Record<Locale, string> = {
   ar: 'خبرة موثقة عبر 213 سجل مشروع، من بينها 51 مشروعًا مصنفًا ضمن مصاعد البانوراما.',
 };
 
-/** Canonical site origin. Overridden per environment; no trailing slash. */
-export const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000').replace(
-  /\/$/,
-  ''
-);
+/**
+ * Canonical site origin. No trailing slash.
+ *
+ * The localhost default used to be the *only* fallback, and the deployed site inherited it:
+ * every page on elevators-misr.vercel.app published
+ * `<link rel="canonical" href="http://localhost:3000/ar">` and three hreflang alternates
+ * pointing at the same unreachable host. To a crawler that is a canonical it cannot fetch on a
+ * site claiming its translations live on someone's laptop — the whole point of the bilingual
+ * SEO setup, inverted. It built and rendered perfectly, because a wrong origin is still a
+ * valid string.
+ *
+ * So the fallback chain now ends somewhere real when it can. `VERCEL_PROJECT_PRODUCTION_URL`
+ * is Vercel's *stable* production host (unlike `VERCEL_URL`, which is per-deployment and would
+ * make the canonical change on every push). It is read at build time, and every consumer of
+ * this value — `robots.ts`, `sitemap.ts`, the layout's metadata, `schema.ts` — is server-side,
+ * so it never needs to reach the browser bundle.
+ *
+ * `NEXT_PUBLIC_SITE_URL` still wins when set, which is what a custom domain will need.
+ * `scripts/preflight.mjs` fails a production check that still resolves to localhost.
+ */
+function resolveSiteUrl(): string {
+  const explicit = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (explicit) return explicit.replace(/\/$/, '');
+
+  const vercelHost = process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim();
+  if (vercelHost) return `https://${vercelHost.replace(/^https?:\/\//, '').replace(/\/$/, '')}`;
+
+  return 'http://localhost:3000';
+}
+
+export const siteUrl = resolveSiteUrl();

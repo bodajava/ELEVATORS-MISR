@@ -119,24 +119,32 @@ export function HeroSpecRail({ locale }: { locale: Locale }) {
         ];
 
   return (
-    <dl className="flex flex-wrap items-baseline gap-x-8 gap-y-2">
-      {items.map((item) => (
-        <div key={item.k} className="flex items-baseline gap-2">
-          <dt className="annotation">{item.k}</dt>
-          <dd className="font-mono text-[0.6875rem] tracking-wide text-ink">{item.v}</dd>
-        </div>
-      ))}
-      <div className="flex items-center gap-2">
+    <div className="flex flex-wrap items-baseline gap-x-8 gap-y-2">
+      <dl className="flex flex-wrap items-baseline gap-x-8 gap-y-2">
+        {items.map((item) => (
+          <div key={item.k} className="flex items-baseline gap-2">
+            <dt className="annotation">{item.k}</dt>
+            <dd className="font-mono text-[0.6875rem] tracking-wide text-ink">{item.v}</dd>
+          </div>
+        ))}
+      </dl>
+      {/* Outside the list, and not by accident. "Booking inspections" is a status, not a term
+          with a definition, and it was sitting in the <dl> as a fourth <div> holding two
+          spans and no dt/dd pair. A definition list may only contain dt/dd groups (a <div>
+          wrapper is allowed, but only around such a group), so this both misdescribed the
+          content and broke the list for anything reading the accessibility tree — a screen
+          reader announcing an item count, or an agent parsing the page. */}
+      <p className="flex items-center gap-2">
         {/* The one animated element in the layer: a slow pulse, not a loop that demands
             attention. Suppressed entirely under reduced motion by the global rule. */}
-        <span className="relative flex size-1.5">
+        <span aria-hidden className="relative flex size-1.5">
           <span className="absolute inline-flex size-full animate-ping rounded-full bg-accent opacity-60 [animation-duration:2.8s]" />
           <span className="relative inline-flex size-1.5 rounded-full bg-accent" />
         </span>
         <span className="annotation text-accent-text">
           {locale === 'en' ? 'Booking inspections' : 'نستقبل طلبات المعاينة'}
         </span>
-      </div>
-    </dl>
+      </p>
+    </div>
   );
 }

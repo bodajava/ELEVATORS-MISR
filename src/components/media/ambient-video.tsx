@@ -79,8 +79,14 @@ export function AmbientVideo({
     >
       <video
         ref={ref}
-        className="absolute inset-0 size-full object-cover"
-        poster={video.poster}
+        className="absolute inset-0 size-full bg-aperture object-cover"
+        // The poster waits for the same observer as the source, and that is the whole point.
+        // A `poster` attribute is fetched **immediately, regardless of `preload="none"`** — so
+        // the deferral below was only ever deferring the video, while four films below the
+        // fold each pulled a full-size still into the critical window anyway. On the Arabic
+        // homepage that was ~190 KB of off-screen images competing with the hero's LCP image
+        // on the same connection. `bg-aperture` holds the card's colour until it arrives.
+        poster={armed ? video.poster : undefined}
         // No source until the arming observer fires, so a page with four films below the
         // fold downloads none of them on load.
         preload={armed ? 'metadata' : 'none'}

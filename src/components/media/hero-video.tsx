@@ -47,10 +47,44 @@ function getServerSnapshot(): HeroVariant {
 
 export function HeroVideo({ hero, className }: { hero: HeroAsset; className?: string }) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const posterRef = useRef<HTMLImageElement>(null);
   const variant = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   const [ready, setReady] = useState(false);
 
-  const src = variant === 'none' ? null : hero.variants[variant].mp4;
+  /**
+   * The poster below is the Largest Contentful Paint element, and the video used to race it.
+   *
+   * `getSnapshot` already declines the video on Save-Data and on a connection reporting 2g/3g,
+   * but throttling at the transport — which is what a real slow connection and Lighthouse's
+   * "Slow 4G" both look like — does not change `navigator.connection`, so none of those guards
+   * fire and `preload="auto"` opened a 296 KB download in parallel with a 51 KB image on a
+   * 1.6 Mbps link. Measured LCP was 5.9–6.4 s with the poster itself weighing 51 KB.
+   *
+   * So the video is not requested until the poster has finished loading. Nothing about the
+   * result changes — the poster was always what painted first and the video always faded in
+   * over it — it just stops the decoration competing with the content for the same pipe.
+   *
+   * `complete` is checked before subscribing because a cached poster finishes loading before
+   * this effect runs, and `error` counts as done: a broken poster must not strand the video.
+   */
+  const [posterLoaded, setPosterLoaded] = useState(false);
+  useEffect(() => {
+    const img = posterRef.current;
+    if (!img) return;
+    if (img.complete) {
+      setPosterLoaded(true);
+      return;
+    }
+    const done = () => setPosterLoaded(true);
+    img.addEventListener('load', done, { once: true });
+    img.addEventListener('error', done, { once: true });
+    return () => {
+      img.removeEventListener('load', done);
+      img.removeEventListener('error', done);
+    };
+  }, []);
+
+  const src = variant === 'none' || !posterLoaded ? null : hero.variants[variant].mp4;
 
   useEffect(() => {
     const el = videoRef.current;
@@ -71,6 +105,7 @@ export function HeroVideo({ hero, className }: { hero: HeroAsset; className?: st
       {/* eslint-disable-next-line @next/next/no-img-element -- must paint with the document,
           not be deferred behind the image optimiser. */}
       <img
+        ref={posterRef}
         src={hero.poster}
         alt=""
         aria-hidden
