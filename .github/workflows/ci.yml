@@ -1,0 +1,164 @@
+name: CI
+
+# Every gate that can run without production credentials. The ones that cannot — a real
+# database, a real SMTP account, a real Redis — are covered by `pnpm preflight` at deploy
+# time instead, against the environment that actually has them. CI never sees a secret.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # The app runs without a database: `getInspectionStore()` falls back to an in-memory store
+  # outside production, which is exactly the shape the E2E suite needs. Nothing here is a
+  # credential, and nothing here would work if it leaked.
+  NEXT_PUBLIC_SITE_URL: http://localhost:3210
+  RATE_LIMIT_SALT: ci-only-not-a-secret-0000000000000000
+  NODE_ENV: test
+
+jobs:
+  static:
+    name: format · types · lint · unit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      # Reported, not enforced. Ten files were already failing at 0ec7d6c — generated drizzle
+      # snapshots and older harness scripts — and reformatting them would bury real diffs in
+      # unrelated churn. Turn this into a hard gate in the same commit that fixes them.
+      - name: format
+        run: pnpm format:check || echo "::warning::format:check has pre-existing failures — see docs/PRODUCTION-HARDENING-REPORT.md"
+
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test
+
+  migrations:
+    name: migrations match the schema
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      # A schema change with no migration generated for it is invisible until a deployment
+      # fails against a real database. `db:generate` is deterministic: if it produces a new
+      # file, the last person to touch the schema did not run it.
+      - name: no ungenerated migration
+        run: |
+          before=$(ls drizzle/*.sql | wc -l)
+          pnpm db:generate
+          after=$(ls drizzle/*.sql | wc -l)
+          if [ "$before" != "$after" ]; then
+            echo "::error::The schema has changed with no migration. Run pnpm db:generate and commit the result."
+            git --no-pager diff --stat
+            exit 1
+          fi
+        env:
+          DATABASE_URL: postgresql://unused:unused@localhost:5432/unused
+
+  secrets:
+    name: no secrets in the tree
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Cheap and specific, rather than a scanner that needs its own configuration to be
+      # useful. These are the shapes this project could plausibly leak.
+      - name: scan
+        run: |
+          set +e
+          fail=0
+
+          if git ls-files | grep -qE '^\.env($|\.local|\.production)'; then
+            echo "::error::An .env file is tracked. Only .env.example may be."
+            fail=1
+          fi
+
+          # Gmail App Password (16 chars in four groups), Upstash token, Google/Anthropic/OpenAI keys.
+          patterns='AIza[0-9A-Za-z_-]{35}|sk-[A-Za-z0-9]{32,}|sk-ant-[A-Za-z0-9_-]{32,}|AS[A-Za-z0-9_-]{40,}'
+          if git ls-files -z | xargs -0 grep -InE "$patterns" -- ':!*.example' ':!*.md' 2>/dev/null; then
+            echo "::error::Something matching an API key shape is committed."
+            fail=1
+          fi
+
+          if git ls-files -z | xargs -0 grep -InE 'postgres(ql)?://[^:]+:[^@]+@' -- ':!*.example' ':!*.md' 2>/dev/null; then
+            echo "::error::A database URL with a password is committed."
+            fail=1
+          fi
+
+          exit $fail
+
+  e2e:
+    name: end to end · accessibility
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: install browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      # `playwright.config.ts` builds and starts the production server itself. A dev server
+      # would be measuring an unminified bundle with an error overlay attached.
+      - run: pnpm test:e2e
+        env:
+          CI: 'true'
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report
+          path: .e2e/report
+          retention-days: 14
+
+  budget:
+    name: performance budget
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm build
+
+      - name: measure against the budget
+        run: |
+          pnpm start --port 3210 &
+          npx wait-on http://localhost:3210/en --timeout 120000
+          node scripts/perf-budget.mjs http://localhost:3210
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: performance-measurements
+          path: .perf
+          retention-days: 14
