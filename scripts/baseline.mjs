@@ -241,7 +241,8 @@ if (errors.length) {
 const overflowing = rows.filter((r) => r.overflowPx > 0);
 if (overflowing.length) {
   console.log(`\n${overflowing.length} with horizontal overflow:`);
-  for (const r of overflowing) console.log(`  ${r.locale} ${r.viewport} ${r.route}: ${r.overflowPx}px`);
+  for (const r of overflowing)
+    console.log(`  ${r.locale} ${r.viewport} ${r.route}: ${r.overflowPx}px`);
 }
 
 if (OUT) {

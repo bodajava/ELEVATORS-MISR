@@ -283,6 +283,45 @@ describe('redis rate limiter', () => {
     expect(decision.ok).toBe(false);
     expect(decision.retryAfterSeconds).toBe(10);
   });
+
+  /**
+   * The failure that made this necessary was not hypothetical: a wrong token in
+   * `UPSTASH_REDIS_REST_TOKEN` passed every shape check, `incr` rejected on the first
+   * submission, the rejection travelled out of `check()` into the server action — whose
+   * `catch` re-throws anything that is not a `MissingEnvError` — and the visitor got an error
+   * boundary instead of a confirmation. The limiter runs *before* the database write, so the
+   * lead was not recorded either. One bad environment variable, no enquiries.
+   */
+  it('degrades to the in-memory limiter when Redis rejects, rather than throwing', async () => {
+    const broken = {
+      async incr(): Promise<number> {
+        throw new Error('UpstashError: WRONGPASS');
+      },
+      async pexpire() {
+        return 0;
+      },
+      async pttl() {
+        return -1;
+      },
+    } as unknown as Redis;
+
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const limiter = createRedisRateLimiter(broken, { limit: 2, windowMs: 60_000 });
+
+    // Never throws, and still enforces the window through the fallback.
+    expect((await limiter.check('addr')).ok).toBe(true);
+    expect((await limiter.check('addr')).ok).toBe(true);
+    expect((await limiter.check('addr')).ok).toBe(false);
+
+    // A different caller is still judged on its own budget — the fallback is a real limiter,
+    // not a permanently-open door.
+    expect((await limiter.check('other')).ok).toBe(true);
+
+    // Logged once, not once per request, and never with the token in it.
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy.mock.calls[0]?.[0]).not.toContain('WRONGPASS');
+    spy.mockRestore();
+  });
 });
 
 describe('rate-limit keys', () => {

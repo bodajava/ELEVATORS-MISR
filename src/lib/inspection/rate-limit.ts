@@ -111,21 +111,58 @@ export function createMemoryRateLimiter(options: WindowOptions): RateLimiter {
  * version is what `rate-limit.ts`'s own design comment already specified; this is that.
  */
 export function createRedisRateLimiter(redis: Redis, options: WindowOptions): RateLimiter {
+  /**
+   * What happens when Redis is reachable-looking but not actually working.
+   *
+   * This used to be nothing, and the consequence was severe out of all proportion to the
+   * cause. `redis.incr()` rejects on a bad token, a deleted database, or a network blip; the
+   * rejection propagated out of `check()` into the server action, whose `catch` re-throws
+   * anything that is not a `MissingEnvError`; the action crashed; the visitor got an error
+   * boundary — and **the lead was never recorded**, because the limiter runs before the
+   * database write. A wrong token in an environment variable was therefore enough to silently
+   * stop the site taking any enquiries at all, while every shape check still passed.
+   *
+   * The failure now degrades to the in-memory limiter instead: still real protection, still
+   * the documented behaviour of an unconfigured deployment, per-instance rather than shared.
+   * Losing a lead is not an acceptable trade for a rate-limit counter, and a broken counter is
+   * not a reason to stop serving. `scripts/preflight.mjs` is where a bad Redis is *meant* to be
+   * caught — loudly, before deployment, rather than by a visitor.
+   */
+  const fallback = createMemoryRateLimiter(options);
+  let degraded = false;
+
   return {
     async check(key: string): Promise<RateLimitDecision> {
-      const count = await redis.incr(key);
-      if (count === 1) await redis.pexpire(key, options.windowMs);
+      if (degraded) return fallback.check(key);
 
-      if (count <= options.limit) {
-        return { ok: true, remaining: options.limit - count, retryAfterSeconds: 0 };
+      try {
+        const count = await redis.incr(key);
+        if (count === 1) await redis.pexpire(key, options.windowMs);
+
+        if (count <= options.limit) {
+          return { ok: true, remaining: options.limit - count, retryAfterSeconds: 0 };
+        }
+
+        const ttlMs = await redis.pttl(key);
+        // `pttl` returns -1 (no expiry) or -2 (key already gone) in edge cases rather than a
+        // real millisecond count; falling back to the window length keeps the number honest —
+        // "retry after the full window" — instead of reporting a negative or zero wait.
+        const retryAfterSeconds = Math.ceil((ttlMs > 0 ? ttlMs : options.windowMs) / 1000);
+        return { ok: false, remaining: 0, retryAfterSeconds };
+      } catch (error) {
+        // Latched, and logged once. A limiter that logs per request turns an outage into a
+        // second outage in the log pipeline. The error's class only — an Upstash error can
+        // carry the request URL, and the token travels in that URL.
+        if (!degraded) {
+          degraded = true;
+          console.error(
+            `[rate-limit] Redis is configured but failing (${(error as Error)?.name ?? 'Error'}) — ` +
+              'falling back to the in-memory limiter for the life of this instance. ' +
+              'Run `node scripts/preflight.mjs` to see why.'
+          );
+        }
+        return fallback.check(key);
       }
-
-      const ttlMs = await redis.pttl(key);
-      // `pttl` returns -1 (no expiry) or -2 (key already gone) in edge cases rather than a
-      // real millisecond count; falling back to the window length keeps the number honest —
-      // "retry after the full window" — instead of reporting a negative or zero wait.
-      const retryAfterSeconds = Math.ceil((ttlMs > 0 ? ttlMs : options.windowMs) / 1000);
-      return { ok: false, remaining: 0, retryAfterSeconds };
     },
   };
 }
