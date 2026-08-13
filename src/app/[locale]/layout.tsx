@@ -7,7 +7,6 @@ import { Concierge } from '@/components/concierge/concierge';
 import { AmbientField } from '@/components/motion/ambient-field';
 import { SmoothScroll } from '@/components/motion/smooth-scroll';
 import { BottomNav } from '@/components/navigation/bottom-nav';
-import { themeScript } from '@/components/ui/theme-toggle';
 import { SiteFooter } from '@/components/layout/site-footer';
 import { SiteHeader } from '@/components/layout/site-header';
 import { SkipLink } from '@/components/layout/skip-link';
@@ -16,6 +15,7 @@ import { getDirection, localeTags, locales, openGraphLocales, type Locale } from
 import { routing } from '@/i18n/routing';
 import { conciergeAvailability } from '@/lib/concierge/provider';
 import { fontVariables } from '@/lib/fonts';
+import { themeScript } from '@/lib/theme';
 
 import '../globals.css';
 
@@ -117,9 +117,21 @@ export default async function LocaleLayout({
         suppressHydrationWarning
       >
         {/* Applies a remembered theme before any content paints. It is the first thing in the
-            body rather than a hand-rolled <head>, because the App Router owns the head and a
-            <script> inside the React tree triggers a hydration warning in React 19. */}
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+            body rather than a hand-rolled <head>, because the App Router owns the head.
+
+            The markup is handed over as innerHTML rather than written as a <script> element,
+            and that is deliberate. A <script> in the React tree only works on the server pass:
+            React never executes one it renders on the *client* — it builds an inert node and
+            logs "Encountered a script tag while rendering React component". That client pass is
+            not hypothetical here. Switching language is a soft navigation across the [locale]
+            segment, so this layout remounts and React recreates every element under it.
+
+            Routing it through innerHTML gives the right behaviour on both passes, for the same
+            reason in each direction: markup parsed from the initial HTML response executes, so
+            this still runs before paint; markup assigned via innerHTML never does, so the
+            remount cannot re-run it. Re-applying the theme after that remount is a separate
+            job, and belongs to the component that owns the attribute — see ThemeToggle. */}
+        <div hidden dangerouslySetInnerHTML={{ __html: `<script>${themeScript}</script>` }} />
         {/* One shared background + cursor system for every page. Fixed, behind
             everything, pointer-events: none. See AmbientField. */}
         <AmbientField />

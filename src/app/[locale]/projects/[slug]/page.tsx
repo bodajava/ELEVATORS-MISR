@@ -21,6 +21,22 @@ export function generateStaticParams() {
   return locales.flatMap((locale) => projects.map((p) => ({ locale, slug: p.slug })));
 }
 
+/**
+ * A slug that is not in the list above is a 404, not a page to render on demand.
+ *
+ * `dynamicParams` defaults to `true`, and the default was wrong here in a way that only shows
+ * up in the response status. An unknown slug was rendered on request, `notFound()` below
+ * produced the not-found UI, and Next then **cached that render and served it with HTTP 200** —
+ * `.next/server/app/en/projects/a-project-that-does-not-exist.html` was a real file. A soft 404:
+ * correct to a reader, an indexable page to a crawler, and an invitation to fill the site's
+ * search results with URLs that do not exist.
+ *
+ * `false` is safe precisely because the list is closed — the projects come from a static array
+ * in `src/content/projects.ts`, not a CMS, so there is no slug that could legitimately appear
+ * after the build. Covered by `tests/e2e/journeys.spec.ts`.
+ */
+export const dynamicParams = false;
+
 export async function generateMetadata({
   params,
 }: {

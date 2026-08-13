@@ -52,11 +52,31 @@ export default defineConfig({
     video: 'retain-on-failure',
   },
 
+  // `reduced-motion.spec.ts` asserts that nothing ambient is still running, which is only true
+  // in a context that asked for reduced motion. The projects below run every other spec, so it
+  // has to be excluded from them by name — without this it runs against a page legitimately
+  // playing its full motion and fails there by design, on a machine-speed-dependent margin.
   projects: [
-    { name: 'desktop-en', use: { ...devices['Desktop Chrome'], locale: 'en-GB' } },
-    { name: 'desktop-ar', use: { ...devices['Desktop Chrome'], locale: 'ar-EG' } },
-    { name: 'mobile-en', use: { ...devices['Pixel 7'] } },
-    { name: 'mobile-ar', use: { ...devices['Pixel 7'], locale: 'ar-EG' } },
+    {
+      name: 'desktop-en',
+      use: { ...devices['Desktop Chrome'], locale: 'en-GB' },
+      testIgnore: /reduced-motion\.spec\.ts/,
+    },
+    {
+      name: 'desktop-ar',
+      use: { ...devices['Desktop Chrome'], locale: 'ar-EG' },
+      testIgnore: /reduced-motion\.spec\.ts/,
+    },
+    {
+      name: 'mobile-en',
+      use: { ...devices['Pixel 7'] },
+      testIgnore: /reduced-motion\.spec\.ts/,
+    },
+    {
+      name: 'mobile-ar',
+      use: { ...devices['Pixel 7'], locale: 'ar-EG' },
+      testIgnore: /reduced-motion\.spec\.ts/,
+    },
     // Reduced motion is a rendering mode, not a preference to check once — a page that only
     // becomes readable after an animation is broken for everyone who has it on.
     {

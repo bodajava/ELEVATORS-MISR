@@ -90,6 +90,89 @@ Regression test in `tests/unit/inspection-security.test.ts`.
 
 ---
 
+## B2. A second silent failure, found from a console error (2026-08-13)
+
+**The theme bootstrap never ran. Not once, in any deployment.**
+
+Reported as a React warning — "Encountered a script tag while rendering React component" from
+`layout.tsx`. The warning was real but minor: React does not execute a `<script>` it renders on
+the _client_, it builds an inert node and logs this. It fires on a language switch, which is a
+soft navigation across the `[locale]` segment and therefore remounts the layout.
+
+Chasing it exposed something the warning was not about. `themeScript` was exported from
+`theme-toggle.tsx`, a `'use client'` module. **Every export of a client module becomes a client
+reference when a Server Component imports it — not the value.** The layout was interpolating that
+reference into the document, so the bytes on the wire were:
+
+```html
+<script>
+  function () {
+    throw new Error('Attempted to call themeScript() from the server but themeScript is on the client. ...');
+  }
+</script>
+```
+
+which is not valid as a statement, so it threw at parse. A visitor who chose dark got the OS
+preference back on **every single load** — the toggle only held for the page view it was pressed
+on. Nothing caught it: the types were right (a client reference is typed as the value it stands in
+for), the build was green, and the only symptom was a preference quietly not being honoured.
+
+A third defect sat underneath. React 19 treats `<html>` as a singleton and
+`acquireSingletonInstance` strips **every** attribute off it on remount before re-applying only
+the props React itself rendered. `data-theme` is written by the bootstrap, never by React, so a
+language switch discarded the chosen theme even once the bootstrap worked.
+
+**Fixed:**
+
+| Defect                                               | Fix                                                                                             |
+| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `themeScript` shipped as a throwing client reference | moved to `src/lib/theme.ts`, a plain module both sides may import                               |
+| React builds an inert `<script>` on the client       | the bootstrap reaches the DOM as innerHTML — parsed markup executes, assigned markup never does |
+| `data-theme` stripped on remount                     | `useThemeSurvivesRemount()` re-applies it in a layout effect, before paint                      |
+
+Regression coverage in `tests/e2e/theme.spec.ts`, asserting the bytes on the wire and the
+attribute in the DOM, because that is the only layer where any of this was visible.
+
+A sweep for the same import trap elsewhere in `src/` found no other Server Component importing a
+value from a `'use client'` module.
+
+---
+
+## B3. The E2E suite was testing the decoy, not the form (2026-08-13)
+
+Running the suite properly for the first time — it had been written but never seen green — turned
+up two more defects and one bad assumption.
+
+**The conversion-path tests never submitted anything.** The action treats a form completed within
+`MIN_FILL_MS` (3s) as a bot and answers with **a fake success carrying a reference that was never
+stored**, deliberately, so a scripted submitter sees no signal to retry. Playwright fills four
+fields in under a second. Every "confirmation" the suite asserted on was that decoy: it was
+testing the honeypot and reporting it as the conversion path. Visible only where a test looked at
+the form _after_ submitting and found it gone.
+
+**The suite could not have passed against the rate limiter either.** Five submissions per address
+per ten minutes; four projects × two submitting tests = eight from one machine. It never hit this
+because tripping the honeypot returns _before_ the limiter runs.
+
+| Defect                                                    | Fix                                                                                               |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Tests submitted faster than a human and got the decoy     | `submitAfterHumanDwell()` waits on the server's own `form-rendered-at` stamp                      |
+| Eight real submissions shared one rate-limit bucket       | `withOwnRateLimitBucket()` gives each test an RFC 5737 documentation address                      |
+| `reduced-motion.spec.ts` ran in projects without the flag | `testIgnore` on the four locale projects — it was asserting "nothing ambient" against full motion |
+| `/egyptian mobile number/i` also matches the field's hint | assertion scoped to `[role="alert"]`, so it cannot pass before a submission                       |
+
+**A real product bug, found by the suite once it worked: unknown project slugs returned HTTP 200.**
+`dynamicParams` defaults to `true`, so an unknown slug was rendered on demand, `notFound()`
+produced the not-found UI, and Next cached that render and served it with 200 —
+`.next/server/app/en/projects/a-project-that-does-not-exist.html` was a real file in the build
+output. A soft 404: correct to a reader, an indexable page to a crawler. Fixed with
+`export const dynamicParams = false` on the route; the project list is a static array, so no slug
+can legitimately appear after the build.
+
+`journeys`, `theme` and `reduced-motion` now pass 36/36 against a production build.
+
+---
+
 ## C. Security and production configuration
 
 | Item                   | State                                                                                                                                                                |

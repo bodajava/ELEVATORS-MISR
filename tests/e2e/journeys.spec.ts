@@ -48,6 +48,23 @@ const copy = {
 /** A phone number nobody owns, in a valid Egyptian mobile shape. */
 const validPhone = () => `010${String(Math.floor(10_000_000 + Math.random() * 89_999_999))}`;
 
+/**
+ * Give this test its own client address, so it gets its own rate-limit bucket.
+ *
+ * The inspection action allows five submissions per address per ten minutes, keyed on
+ * `x-forwarded-for` (see `clientAddressFrom`). Every project in this suite submits from the
+ * same machine, so together they exceed that within a single run and the later ones are
+ * refused — a correct product behaviour failing an incorrect test.
+ *
+ * The addresses come from 198.51.100.0/24, which RFC 5737 reserves for documentation and
+ * examples, so nothing here can collide with a real client.
+ */
+async function withOwnRateLimitBucket(page: Page) {
+  await page.setExtraHTTPHeaders({
+    'x-forwarded-for': `198.51.100.${1 + Math.floor(Math.random() * 254)}`,
+  });
+}
+
 async function fillInspectionForm(page: Page, locale: Locale, phone: string) {
   const t = copy[locale];
   await page.getByLabel(t.name).fill('E2E Test Visitor');
@@ -56,10 +73,34 @@ async function fillInspectionForm(page: Page, locale: Locale, phone: string) {
   await page.getByLabel(t.consent).check();
 }
 
+/**
+ * Submit no sooner than the form's own anti-automation threshold allows.
+ *
+ * The action treats anything completed within `MIN_FILL_MS` (3s of the render timestamp in the
+ * `form-rendered-at` field) as a bot, and answers it with a **fake success carrying a reference
+ * that was never stored** — deliberately, so a scripted submitter sees no signal to retry.
+ *
+ * Playwright fills four fields in well under a second, so every test here was submitting into
+ * that trap: it saw a confirmation, asserted on it happily, and was in fact exercising the
+ * rejection path with nothing written to the database. The failure only became visible where a
+ * test looked at the form *after* submitting and found it replaced.
+ *
+ * Waiting on the timestamp the server will actually read, rather than a fixed sleep, keeps this
+ * correct if the threshold moves and costs nothing when the test was already slow enough.
+ */
+async function submitAfterHumanDwell(page: Page, locale: Locale) {
+  const MIN_FILL_MS = 3_000;
+  const renderedAt = Number(await page.locator('input[name="form-rendered-at"]').inputValue());
+  const remaining = MIN_FILL_MS - (Date.now() - renderedAt);
+  if (remaining > 0) await page.waitForTimeout(remaining + 250);
+  await page.getByRole('button', { name: copy[locale].submit }).click();
+}
+
 test.describe('the conversion path', () => {
   test('homepage → project → inspection form → confirmation', async ({ page }, testInfo) => {
     const locale = localeFor(testInfo.project.name);
     const t = copy[locale];
+    await withOwnRateLimitBucket(page);
 
     await page.goto(`/${locale}`);
 
@@ -77,7 +118,7 @@ test.describe('the conversion path', () => {
     await page.goto(`/${locale}/contact`);
     const phone = validPhone();
     await fillInspectionForm(page, locale, phone);
-    await page.getByRole('button', { name: t.submit }).click();
+    await submitAfterHumanDwell(page, locale);
 
     // Confirmation, with a reference the visitor can quote. No timing promise is asserted
     // because none may exist — that is a product rule, and this is where it would leak.
@@ -91,15 +132,20 @@ test.describe('the conversion path', () => {
   }, testInfo) => {
     const locale = localeFor(testInfo.project.name);
     const t = copy[locale];
+    await withOwnRateLimitBucket(page);
 
     await page.goto(`/${locale}/contact`);
     await page.getByLabel(t.name).fill('E2E Test Visitor');
     await page.getByLabel(t.phone).fill('12345');
     await page.getByLabel(t.area).fill(locale === 'ar' ? 'التجمع' : 'New Cairo');
     await page.getByLabel(t.consent).check();
-    await page.getByRole('button', { name: t.submit }).click();
+    await submitAfterHumanDwell(page, locale);
 
-    await expect(page.getByText(t.phoneError)).toBeVisible({ timeout: 20_000 });
+    // Scoped to the live region: "Egyptian mobile number" is also the field's permanent hint,
+    // so a page-wide match for it passes before anything has been submitted at all.
+    await expect(page.locator('[role="alert"]').filter({ hasText: t.phoneError })).toBeVisible({
+      timeout: 20_000,
+    });
 
     // The bug this guards: React resets uncontrolled inputs to `defaultValue` when the action's
     // response re-renders, so a single bad digit used to wipe every other field.
@@ -110,6 +156,7 @@ test.describe('the conversion path', () => {
     await page.getByLabel(t.phone).fill(validPhone());
     await page.getByRole('button', { name: t.submit }).click();
     await expect(page.getByRole('heading', { name: t.received })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText(/EE-[A-Z0-9]{4}-[A-Z0-9]{4}/)).toBeVisible();
   });
 });
 
