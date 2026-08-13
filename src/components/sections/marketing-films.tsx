@@ -1,4 +1,8 @@
-import { FilmCarousel, type CarouselFilm } from '@/components/media/film-carousel';
+import {
+  FilmCarousel,
+  PORTRAIT_ASPECT,
+  type CarouselFilm,
+} from '@/components/media/film-carousel';
 import { Reveal } from '@/components/motion/reveal';
 import { Container } from '@/components/ui/container';
 import { SectionHeading } from '@/components/ui/section-heading';
@@ -69,6 +73,8 @@ export function MarketingFilms({ locale }: { locale: Locale }) {
         <Reveal>
           <FilmCarousel
             className="mt-12"
+            name="marketing"
+            aspect={PORTRAIT_ASPECT}
             films={slides}
             dir={getDirection(locale)}
             labels={t.controls[locale]}

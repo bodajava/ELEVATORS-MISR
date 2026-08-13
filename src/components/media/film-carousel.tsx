@@ -9,6 +9,39 @@ import { FilmLightbox, type LightboxFilm } from '@/components/media/film-lightbo
 import type { VideoAsset } from '@/lib/media';
 import { cn } from '@/lib/utils';
 
+/**
+ * The default frame height — tuned for 9:16 pieces to camera.
+ *
+ * Two expressions, because a phone and a desktop size this from different constraints. `36vw`
+ * alone was a desktop rule applied everywhere: on a 390px screen it fell to its 210px floor,
+ * and a 9:16 film at a 210px frame is a **118px-wide card** — a matchbox, three and a half of
+ * them across the screen. Below `sm` the height is driven from the viewport width instead, so
+ * one film leads and the next one peeks.
+ */
+export const PORTRAIT_CARD_HEIGHT =
+  '[--card-h:clamp(300px,103vw,440px)] sm:[--card-h:clamp(210px,36vw,480px)]';
+
+/** 9:16, the shape of a piece to camera. */
+export const PORTRAIT_ASPECT = 9 / 16;
+
+/** 16:9, the shape of a walkthrough. */
+export const LANDSCAPE_ASPECT = 16 / 9;
+
+/**
+ * The same rail, sized for 16:9 walkthroughs.
+ *
+ * A landscape card is 1.78 times its height rather than 0.56 of it, so the height that makes a
+ * portrait card fill the screen makes a landscape one four times too wide.
+ *
+ * The phone figure is set against the **rail's** window rather than the viewport: the track is
+ * 350px wide inside a 390px screen once the page gutter and the rail's own scroll padding are
+ * taken out, so a card driven to 92vw was 359px — wider than the window it lives in, with no
+ * position where it was ever fully on screen. 43vw puts a 16:9 card at 298px there, which
+ * leaves a real peek of the next one.
+ */
+export const LANDSCAPE_CARD_HEIGHT =
+  '[--card-h:clamp(130px,43vw,300px)] sm:[--card-h:clamp(200px,24vw,380px)]';
+
 export type CarouselFilm = {
   video: VideoAsset;
   /** Accessible name — describes the footage, not the control. */
@@ -60,6 +93,9 @@ export function FilmCarousel({
   films,
   dir,
   labels,
+  name,
+  cardHeight = PORTRAIT_CARD_HEIGHT,
+  aspect,
   /** Milliseconds between steps. */
   interval = 4200,
   className,
@@ -77,6 +113,37 @@ export function FilmCarousel({
     goTo: string;
     close: string;
   };
+  /**
+   * Which rail this is, published as `data-film-carousel="<name>"`.
+   *
+   * Two rails now use this component on the homepage, so the verification harness needs to be
+   * able to say which one it is driving — `document.querySelector('[data-film-carousel]')`
+   * always found the first.
+   */
+  name: string;
+  /**
+   * The shared frame height, as utility classes.
+   *
+   * One height for the whole rail, with each card as wide as its own ratio needs — that is what
+   * lets portrait and landscape sit in one strip without letterboxing either. The right height
+   * depends on what the footage is, which is why it is a prop: 9:16 pieces to camera and 16:9
+   * walkthroughs cannot share a number without one of them becoming a stamp.
+   */
+  cardHeight?: string;
+  /**
+   * The card's shape, as width ÷ height. **One shape for the whole rail.**
+   *
+   * Cards used to take their width from each film's own ratio, so a rail holding both 16:9 and
+   * 3:4 footage had cards of two different widths. Everything that moves this rail — the step,
+   * the jump-to-dot, the active-index read and the loop correction — divides one block by the
+   * number of cards in it, which is only true while they are all the same width. With mixed
+   * widths the index was wrong by most of a card: `next` reported the same slide twice and the
+   * "active" card settled 631px away from the leading edge.
+   *
+   * A card that is not its film's shape crops rather than letterboxes (`object-cover`), and
+   * the full frame is one tap away in the lightbox.
+   */
+  aspect: number;
   interval?: number;
   className?: string;
 }) {
@@ -185,6 +252,8 @@ export function FilmCarousel({
       raf = 0;
       const block = blockRef.current;
       if (block <= 0) return;
+      // One stride per card, which holds because every card in a rail is the same width —
+      // see `aspect` on the component.
       const stride = block / unit;
       const index = Math.round((getPos() - block) / stride);
       setActive(((index % count) + count) % count);
@@ -291,7 +360,7 @@ export function FilmCarousel({
     <div
       ref={rootRef}
       className={cn('relative', className)}
-      data-film-carousel
+      data-film-carousel={name}
       style={{ ['--rail-max' as string]: '44rem' }}
     >
       <ul
@@ -329,33 +398,24 @@ export function FilmCarousel({
         }}
         className={[
           // One shared frame height; each card is as wide as its own ratio needs, which is the
-          // only way to mix portrait and landscape without letterboxing.
-          //
-          // Two expressions, not one, because a phone and a desktop are sizing this from
-          // different constraints. `36vw` alone was a desktop rule applied everywhere: on a
-          // 390px screen it fell to the 210px floor, and a 9:16 film at a 210px frame is a
-          // **118px-wide card** — a matchbox, three and a half of them across the screen, with
-          // a presenter's face too small to read. Below `sm` the height is driven from the
-          // viewport width instead (a 9:16 card at ~58vw of width needs ~103vw of height), so
-          // one film leads and the next one peeks. From `sm` the original desktop rule
-          // returns unchanged.
-          '[--card-h:clamp(300px,103vw,440px)] sm:[--card-h:clamp(210px,36vw,480px)]',
+          // only way to mix portrait and landscape without letterboxing. What that height is
+          // depends on the footage — see the two constants at the top of this file.
+          cardHeight,
           'flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-1 sm:gap-4',
           // Bleeds past the gutter so the next card peeks — the affordance that says the rail
           // continues, without a control to say it.
           '-mx-(--gutter) scroll-px-(--gutter) px-(--gutter)',
           // Never wider than one block, at any width — see the measurement above; that is the
-          // loop's hard requirement, not a style choice. From `lg` it is also held to 80% of
-          // the container, which is the width the brief asks for.
+          // loop's hard requirement, not a style choice. From `lg` it is also held to 90% of
+          // the container, which is the width the owner asked for.
           'mx-auto max-w-(--rail-max)',
-          'lg:max-w-[min(80%,var(--rail-max))] lg:scroll-px-0 lg:px-0',
+          'lg:max-w-[min(90%,var(--rail-max))] lg:scroll-px-0 lg:px-0',
           'scrollbar-none focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-focus',
           // The loop correction must land instantly, so no smooth behaviour from the sheet.
           'scroll-auto',
         ].join(' ')}
       >
         {rendered.map(({ film, real, filmIndex, key }) => {
-          const ratio = film.video.width / film.video.height;
           const isPlaying = real && playing === filmIndex;
           const isActive = real && active === filmIndex;
 
@@ -374,7 +434,7 @@ export function FilmCarousel({
               data-marketing-slide={real ? 'real' : 'clone'}
               data-film-index={real ? filmIndex : undefined}
               className="shrink-0 snap-start"
-              style={{ width: `min(calc(var(--card-h) * ${ratio.toFixed(4)}), 74vw)` }}
+              style={{ width: `min(calc(var(--card-h) * ${aspect.toFixed(4)}), 82vw)` }}
               onMouseEnter={real ? () => setPlaying(filmIndex) : undefined}
               onMouseLeave={real ? () => setPlaying(null) : undefined}
             >
@@ -406,7 +466,7 @@ export function FilmCarousel({
                     alt=""
                     aria-hidden
                     fill
-                    sizes="(min-width: 1024px) 340px, 74vw"
+                    sizes="(min-width: 1024px) 620px, 82vw"
                     className="object-cover"
                   />
                 )}
@@ -460,7 +520,7 @@ export function FilmCarousel({
 
       {/* Aligned to the rail, not to the page. Controls sitting at the container's edges while
           the rail sits inside them read as belonging to something else. */}
-      <div className="mx-auto mt-4 flex max-w-(--rail-max) items-center justify-between gap-4 lg:max-w-[min(80%,var(--rail-max))]">
+      <div className="mx-auto mt-4 flex max-w-(--rail-max) items-center justify-between gap-4 lg:max-w-[min(90%,var(--rail-max))]">
         <div className="flex items-center">
           {films.map((film, index) => (
             <button

@@ -169,6 +169,17 @@ call path does not ship without one), the "ARAB EGYPT FOR ELEVATORS" burned-in d
 the marketing-video rights questions. Full status and evidence:
 [`docs/FINAL-PRODUCTION-READINESS-REPORT.md`](docs/FINAL-PRODUCTION-READINESS-REPORT.md).
 
+**One slider, and prints that stay put, 2026-08-13.** The project-films marquee was replaced by
+the same `FilmCarousel` the Marketing Films section uses, on the owner's instruction — one rail
+design on the homepage, at 90% of its container from `lg`, auto-advancing, playing a card under
+the pointer. `FilmMarquee` and `marquee-check.mjs` were deleted with it; `marketing-check.mjs`
+now drives either rail by name. Each rail gives its cards **one shape** (`aspect`): the rail's
+step, jump and active-index arithmetic all divide a block by the number of cards in it, which is
+only true while the cards are the same width. In the photo fan, released prints now stay where
+they are dropped instead of springing back, inside bounds computed by hand — `dragConstraints`
+with a ref does not account for the ancestor transform the fan applies, and every boundary came
+out displaced by exactly that print's fan offset.
+
 **Owner content and Arabic pass, 2026-08-12.** The owner supplied replacement homepage copy
 (the "first and only in Egypt" claim, the company statement, the coverage widening to the Arab
 world) and compound names for four of the five featured installations, so the site now publishes
@@ -185,7 +196,8 @@ that produced 118px-wide cards on a phone.
 
 Verification harnesses live in `scripts/` and are run against a dev or production server:
 `hero-check`, `form-check`, `matrix-check`, `emptiness`, `about-check`, `perf`, `index-check`,
-`marquee-check`, `grid-check`, `ambient-check`, `marketing-check`. A terminal
+`grid-check`, `ambient-check`, `marketing-check` (both film rails; `--rail=marketing|projects`
+picks one). A terminal
 command passing is not visual completion — `emptiness.mjs` exists because the earlier
 band-based dead-space check reported clean pages that were visibly empty.
 

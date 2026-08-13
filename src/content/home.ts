@@ -276,9 +276,12 @@ export const mediaSection: {
 } = {
   eyebrow: { en: 'On film', ar: 'على الشاشة' },
   heading: { en: 'Walk through a finished job', ar: 'جولة داخل عمل منفَّذ' },
+  // Reworded 2026-08-12: the rail plays a film under the pointer now, so "nothing plays until
+  // you ask it to" was no longer true. Sound still never starts on its own, and that is the
+  // half of the promise that actually matters.
   lede: {
-    en: 'Our own footage of completed installations. Nothing plays until you ask it to, and nothing plays with sound you did not turn on.',
-    ar: 'لقطات من تصويرنا لأعمال مكتملة. لا يبدأ أي فيلم إلا بطلبك، ولا يعمل بصوت لم تختره.',
+    en: 'Our own footage of completed installations. Hover a film to let it run, open it to see it full screen — and nothing plays with sound you did not turn on.',
+    ar: 'لقطات من تصويرنا لأعمال مكتملة. مرِّر المؤشر على أي فيلم ليعمل، أو افتحه بملء الشاشة — ولا يبدأ أي صوت إلا إذا طلبته.',
   },
   filmNote: {
     en: 'Filmed on site by our team.',
@@ -318,9 +321,11 @@ export const socialProof: {
       { term: 'الادّعاء', detail: 'لا شيء. الصورة ليست شهادة عميل ولا تُعرض على أنها كذلك.' },
     ],
   },
+  // The prints stay where they are put down now, so the old line — "it finds its way back" —
+  // described behaviour the section no longer has.
   hint: {
-    en: 'Pick a photograph up and move it — it finds its way back.',
-    ar: 'التقط أي صورة وحرّكها — ستعود إلى مكانها.',
+    en: 'Pick a photograph up and put it wherever you like — it stays where you leave it.',
+    ar: 'التقط أي صورة وضعها حيث تشاء — ستبقى مكانها الذي تركتها فيه.',
   },
 };
 

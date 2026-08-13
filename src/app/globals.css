@@ -161,23 +161,6 @@
   --duration-base: 380ms;
   --duration-slow: 620ms;
 
-  /* The film strip's endless travel.
-     Linear on purpose — an eased marquee visibly hesitates at each restart, which is exactly
-     what a seamless loop must not do. Both the distance and the duration are measured from
-     the rendered group by FilmMarquee and set on the element, because every film is a
-     different width and the group's size cannot be derived from a count. The fallbacks here
-     only cover the frame before the first measurement lands. */
-  --animate-film-marquee: film-marquee var(--marquee-duration, 60s) linear infinite;
-
-  @keyframes film-marquee {
-    to {
-      /* One group's width exactly, so the frame arriving at the seam is the one that just
-         left it. `--marquee-dir` flips the travel for RTL, where the second copy sits off
-         the left edge instead of the right. */
-      transform: translate3d(calc(var(--marquee-distance, 0px) * var(--marquee-dir, -1)), 0, 0);
-    }
-  }
-
   /* --- Layout ------------------------------------------------------------ */
   --container-text: 40rem;
   --container-wide: 82rem;

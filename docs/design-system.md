@@ -255,9 +255,12 @@ clip never decodes behind the viewer. Every duplicated copy is `inert` as well a
 `aria-hidden`: a focusable control inside an aria-hidden subtree puts the tab order somewhere
 a screen reader has been told does not exist.
 
-Tiles share one height and take their width from each film's own ratio — the same film-strip
-rule the paged rail uses, for the same reason: a shared width letterboxes the portrait clips and
-crops the landscape ones. `scripts/marquee-check.mjs` asserts all of the above.
+Cards share one height **and one shape** per rail: the step, the jump-to-dot and the
+active-index read all divide one block by the number of cards in it, which holds only while
+every card is the same width. A card that is not its film's own ratio crops rather than
+letterboxes, and the full frame is one tap away in the viewer. The two rails choose their own
+shape — 9:16 for the pieces to camera, 16:9 for the walkthroughs.
+`scripts/marketing-check.mjs` asserts all of the above, for both rails.
 
 ### Video behaviour
 
