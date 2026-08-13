@@ -47,9 +47,7 @@ const contentSecurityPolicy = [
   "default-src 'self'",
   // `'unsafe-eval'` is granted in development only — Turbopack's HMR client needs it, and
   // nothing in the production bundle compiles code at runtime.
-  isDev
-    ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
-    : "script-src 'self' 'unsafe-inline'",
+  isDev ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'" : "script-src 'self' 'unsafe-inline'",
   "style-src 'self' 'unsafe-inline'",
   // `'self'`, and nothing else. `next/font/google` downloads the families at build time and
   // serves them from `/_next/static/media` — no request ever reaches fonts.gstatic.com, and

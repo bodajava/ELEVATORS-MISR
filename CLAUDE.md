@@ -45,6 +45,7 @@ These are confirmed requirements. Treat them as binding; do not restate them as 
   instruction. Nothing else widened: the site still markets panorama cars and nothing else,
   there is still no second product line, no page has been added, and the rule above continues
   to hold for everything the owner has not named. Do not extrapolate from these two strings.
+
 - **Primary conversion: requesting a physical site inspection.** Every page's primary CTA path
   leads here. Secondary actions (browse gallery, human follow-up form, and — only once a confirmed
   phone number exists — a direct call) must stay visually subordinate. See _Contact and conversation

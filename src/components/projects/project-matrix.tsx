@@ -196,7 +196,9 @@ export function ProjectMatrix({
                       'duration-slow object-cover transition-[transform,opacity] ease-travel',
                       // The primary frame recedes rather than zooming: a scale-to-1.05 card is
                       // the generic gesture this index is explicitly not using.
-                      secondary ? 'group-hover/card:opacity-0 group-focus-visible/card:opacity-0' : ''
+                      secondary
+                        ? 'group-hover/card:opacity-0 group-focus-visible/card:opacity-0'
+                        : ''
                     )}
                   />
                 )}
@@ -243,7 +245,12 @@ export function ProjectMatrix({
                 {/* The caption lives *on* the photograph. That is the difference between a
                     mosaic and a wall of cards: the frame is the object, not a container with a
                     body under it. The scrim is dark enough for AA at these sizes. */}
-                <div className={cn('pointer-events-none absolute inset-x-0 bottom-0', wide ? 'p-5 sm:p-7' : 'p-3 sm:p-4')}>
+                <div
+                  className={cn(
+                    'pointer-events-none absolute inset-x-0 bottom-0',
+                    wide ? 'p-5 sm:p-7' : 'p-3 sm:p-4'
+                  )}
+                >
                   <h3
                     className={cn(
                       'font-display text-ink-on-dark drop-shadow-[0_1px_6px_rgba(0,0,0,0.7)]',
