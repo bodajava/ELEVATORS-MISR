@@ -191,17 +191,38 @@ export const experienceStatement: Record<Locale, string> = {
  * this value — `robots.ts`, `sitemap.ts`, the layout's metadata, `schema.ts` — is server-side,
  * so it never needs to reach the browser bundle.
  *
- * `NEXT_PUBLIC_SITE_URL` still wins when set, which is what a custom domain will need.
+ * `NEXT_PUBLIC_SITE_URL` still wins when set, which is what a custom domain will need — with
+ * one exception, added after the first attempt at this failed in production. Adding the Vercel
+ * fallback was not enough, because the variable *is* set in the deployment, to
+ * `http://localhost:3000`: a local value copied into the hosting environment. An explicit
+ * loopback origin is therefore treated as the mistake it always is, and the real host wins over
+ * it. A canonical URL naming a machine no crawler can reach has no valid reading.
+ *
  * `scripts/preflight.mjs` fails a production check that still resolves to localhost.
  */
+const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '0.0.0.0', '[::1]']);
+
 function resolveSiteUrl(): string {
-  const explicit = process.env.NEXT_PUBLIC_SITE_URL?.trim();
-  if (explicit) return explicit.replace(/\/$/, '');
-
   const vercelHost = process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim();
-  if (vercelHost) return `https://${vercelHost.replace(/^https?:\/\//, '').replace(/\/$/, '')}`;
+  const vercelOrigin = vercelHost
+    ? `https://${vercelHost.replace(/^https?:\/\//, '').replace(/\/$/, '')}`
+    : null;
 
-  return 'http://localhost:3000';
+  const explicit = process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/$/, '');
+  if (explicit) {
+    let host: string | null = null;
+    try {
+      host = new URL(explicit).hostname;
+    } catch {
+      // Not a URL at all. Fall through rather than publish it into every canonical tag.
+      host = null;
+    }
+    // Keep it unless it is a loopback address *and* somewhere real is available to use instead:
+    // on a developer's machine there is no alternative, and localhost is the right answer there.
+    if (host && !(LOOPBACK_HOSTS.has(host) && vercelOrigin)) return explicit;
+  }
+
+  return vercelOrigin ?? 'http://localhost:3000';
 }
 
 export const siteUrl = resolveSiteUrl();

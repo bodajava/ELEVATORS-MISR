@@ -54,7 +54,7 @@ export async function InspectionCta({ locale }: { locale: Locale }) {
                   key={line}
                   className="flex gap-5 border-t border-rule-on-dark py-4 text-sm text-ink-2-on-dark"
                 >
-                  <span className="numeric shrink-0 annotation text-accent" dir="ltr">
+                  <span className="numeric shrink-0 annotation text-accent-on-dark" dir="ltr">
                     {String(index + 1).padStart(2, '0')}
                   </span>
                   <span>{line}</span>

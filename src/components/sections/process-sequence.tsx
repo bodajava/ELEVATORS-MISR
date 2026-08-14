@@ -99,10 +99,16 @@ export function ProcessSequence({
                   />
                 </span>
 
+                {/* The inactive state is a colour step, not a fade.
+                    `text-ink-3` is #6F6A5B and passes at 5.13:1, but `opacity-75` blended it
+                    toward the cream page to an effective #928E82 — 3.1:1, a fail. Dimming text
+                    that is already the quietest tone in the system is how a passing token ends
+                    up failing anyway, and this body copy stays on screen and readable whether
+                    or not its stage is the active one. */}
                 <p
                   className={cn(
-                    'duration-base mt-4 max-w-[52ch] text-sm transition-opacity ease-standard sm:text-base',
-                    isActive ? 'text-ink-2 opacity-100' : 'text-ink-3 opacity-75'
+                    'duration-base mt-4 max-w-[52ch] text-sm transition-colors ease-standard sm:text-base',
+                    isActive ? 'text-ink-2' : 'text-ink-3'
                   )}
                 >
                   {stage.body}

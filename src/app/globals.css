@@ -62,11 +62,15 @@
      `accent`      #C96442 — 3.70:1 on linen. Rules, indicators, display type.
      `accent-hi`   the fill a CTA actually uses, dark enough that its label passes.
      `accent-text` the only accent permitted at body size on a light ground.
-     `on-accent`   what sits on an accent fill. */
+     `on-accent`   what sits on an accent fill.
+     `accent-on-dark` accent text on a carbon section — `accent` is 3.88:1 there and fails.
+     `accent-press` the pressed CTA fill. */
   --color-accent: var(--accent);
   --color-accent-hi: var(--accent-hi);
   --color-accent-text: var(--accent-text);
   --color-on-accent: var(--on-accent);
+  --color-accent-on-dark: var(--accent-on-dark);
+  --color-accent-press: var(--accent-press);
 
   /* --- Rules -------------------------------------------------------------- */
   --color-rule: var(--rule);
@@ -224,6 +228,14 @@
   --accent-hi: #b0522e; /* CTA fill; its label is #FAF9F5 at 4.87:1 */
   --accent-text: #a84e2b; /* 5.26:1 — the only accent at body size */
   --on-accent: #faf9f5; /* 4.87:1 on --accent-hi */
+  /* Accent text on a carbon section, inside the light theme.
+     `--accent` is tuned for a cream ground and measures only 3.88:1 on --carbon, which fails
+     AA at annotation sizes — and the annotation layer (the 01/02/03 indices, section eyebrows,
+     the active locale) is exactly where it was being used on carbon. This is the same tone the
+     dark theme already proves at 6.54:1; it needs a name in the light theme too, because a
+     dark *section* is not a dark *theme* and none of the theme overrides reach it. */
+  --accent-on-dark: #e08a5f; /* 6.54:1 on --carbon */
+  --accent-press: #93441f; /* pressed CTA fill; its label is #FAF9F5 at 6.24:1 */
 
   --rule: color-mix(in oklab, #3d3929 16%, transparent);
   --rule-strong: color-mix(in oklab, #3d3929 34%, transparent);
@@ -298,6 +310,11 @@
   --accent-hi: #eb9a71;
   --accent-text: #e08a5f; /* passes at body size here, so one tone serves both */
   --on-accent: #1c1b18; /* 6.54:1 on --accent */
+  /* Every ground is already dark here, so these collapse onto the tones above. They still have
+     to be restated: without them the light theme's values leak through and the dark theme
+     would paint a CTA in #B0522E and annotations in a tone tuned for cream. */
+  --accent-on-dark: #e08a5f;
+  --accent-press: #f0aa85; /* pressed CTA fill; its label is #1C1B18 */
 
   --rule: color-mix(in oklab, #ede9de 16%, transparent);
   --rule-strong: color-mix(in oklab, #ede9de 32%, transparent);
@@ -359,6 +376,8 @@
     --accent-hi: #eb9a71;
     --accent-text: #e08a5f;
     --on-accent: #1c1b18;
+    --accent-on-dark: #e08a5f;
+    --accent-press: #f0aa85;
 
     --rule: color-mix(in oklab, #ede9de 16%, transparent);
     --rule-strong: color-mix(in oklab, #ede9de 32%, transparent);

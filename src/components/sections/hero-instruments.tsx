@@ -59,9 +59,15 @@ export function HeroInstruments({ locale }: { locale: Locale }) {
                     : 'size-1.5 rounded-full bg-ink/15'
                 }
               />
+              {/* The unlit floors read as unlit from the dot beside them, not from the
+                  numeral being nearly invisible. `text-ink/25` measured 1.57:1 — decorative
+                  under WCAG, which exempts it, but axe cannot know that and Lighthouse scores
+                  it anyway. `text-ink-3` is the system's quietest legible tone at 5.13:1 and
+                  still sits well behind the lit floor, which carries both the accent and a
+                  glowing dot. */}
               <span
                 className={`font-mono text-[0.6rem] tabular-nums ${
-                  isCurrent ? 'text-accent-text' : 'text-ink/25'
+                  isCurrent ? 'text-accent-text' : 'text-ink-3'
                 }`}
                 dir="ltr"
               >

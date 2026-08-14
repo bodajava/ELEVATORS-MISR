@@ -218,7 +218,7 @@ export function ProjectMatrix({
 
                 {/* Index, top-leading. Lifts to the accent with the title. */}
                 <span
-                  className="numeric duration-fast absolute start-3 top-3 z-10 rounded-(--radius-control) bg-carbon/70 px-2 py-1 text-2xs font-semibold text-ink-on-dark transition-colors ease-standard group-hover/card:text-accent group-focus-visible/card:text-accent"
+                  className="numeric duration-fast absolute start-3 top-3 z-10 rounded-(--radius-control) bg-carbon/70 px-2 py-1 text-2xs font-semibold text-ink-on-dark transition-colors ease-standard group-hover/card:text-accent-on-dark group-focus-visible/card:text-accent-on-dark"
                   dir="ltr"
                 >
                   {String(index + 1).padStart(2, '0')}

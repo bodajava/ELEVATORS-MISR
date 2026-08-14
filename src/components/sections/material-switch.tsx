@@ -92,10 +92,14 @@ export function MaterialSwitch({
                   />
                 </span>
 
+                {/* A colour step, not a fade — same reason as the process sequence.
+                    `opacity-70` blended `text-ink-3` toward the page to an effective #999589,
+                    2.84:1, well under AA. The inactive option's description is still on screen
+                    and still meant to be read. */}
                 <p
                   className={cn(
-                    'duration-base mt-4 max-w-[46ch] text-sm transition-opacity ease-standard',
-                    isActive ? 'text-ink-2 opacity-100' : 'text-ink-3 opacity-70'
+                    'duration-base mt-4 max-w-[46ch] text-sm transition-colors ease-standard',
+                    isActive ? 'text-ink-2' : 'text-ink-3'
                   )}
                 >
                   {option.body}

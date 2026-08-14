@@ -42,7 +42,14 @@ export const hero: {
 } = {
   wordmark: {
     en: ['Egypt', 'Elevators'],
-    ar: ['مصر', 'العربية للمصاعد'],
+    // Split at the name's own break, not after the first word. «مصر» alone is three characters
+    // against «العربية للمصاعد»'s fifteen, and the long half wrapped at every width below
+    // 1440px — so the lockup rendered as three stacked lines and the first line read as a
+    // stranded «مصر» floating above the other two. «مصر العربية» / «للمصاعد» is eleven against
+    // seven, which is the balance the Latin pair already has, and it fits on one line
+    // everywhere. Both halves are aria-hidden: this is the drawn lockup, not the accessible
+    // name, so the split is a purely visual decision.
+    ar: ['مصر العربية', 'للمصاعد'],
   },
   headline: {
     en: 'Elevating architecture through glass',

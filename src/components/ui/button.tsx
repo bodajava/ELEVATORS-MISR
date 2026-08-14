@@ -33,18 +33,26 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        /** The inspection path. The only solid orange in the layout. */
+        /**
+         * The inspection path. The only solid orange in the layout.
+         *
+         * The fill is `accent-hi`, not `accent`. `--on-accent` is documented as "4.87:1 on
+         * --accent-hi" and this variant paired it with `--accent` instead — 3.70:1, which is
+         * a fail at every size this button is ever set in. The site's most important control
+         * was the one place the contrast system was not followed. Hover and press now step
+         * darker rather than starting at the fill hover used to land on.
+         */
         primary:
-          'border-accent bg-accent text-on-accent hover:border-accent-hi hover:bg-accent-hi active:translate-y-px',
+          'border-accent-hi bg-accent-hi text-on-accent hover:border-accent-press hover:bg-accent-press active:translate-y-px',
         secondary:
           'border-rule-strong bg-transparent text-ink hover:border-ink hover:bg-ink hover:text-paper',
         ghost: 'border-transparent bg-transparent text-ink-2 hover:text-ink',
         /* For use on carbon, where the ground is dark. */
         onDark:
-          'border-rule-on-dark bg-transparent text-ink-on-dark hover:border-accent hover:bg-accent hover:text-on-accent',
+          'border-rule-on-dark bg-transparent text-ink-on-dark hover:border-accent-hi hover:bg-accent-hi hover:text-on-accent',
         /** The inspection path on carbon — still orange, because it means the same thing. */
         primaryOnDark:
-          'border-accent bg-accent text-on-accent hover:border-accent-hi hover:bg-accent-hi active:translate-y-px',
+          'border-accent-hi bg-accent-hi text-on-accent hover:border-accent-press hover:bg-accent-press active:translate-y-px',
       },
       size: {
         sm: 'min-w-11 px-4 py-2 text-xs',

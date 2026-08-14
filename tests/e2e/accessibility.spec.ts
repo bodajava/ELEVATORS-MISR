@@ -55,12 +55,47 @@ for (const locale of ['en', 'ar'] as const) {
 test('the inspection form is announced correctly when it rejects input', async ({ page }) => {
   await page.goto('/en/contact');
   await page.getByLabel(/^phone$/i).fill('12345');
+
+  // Submitting within `MIN_FILL_MS` (3s of the render timestamp) is treated as a bot and
+  // answered with a fake success, so there is no error to announce and this test was asserting
+  // against the honeypot's response rather than the form's. Wait on the stamp the server reads.
+  const renderedAt = Number(await page.locator('input[name="form-rendered-at"]').inputValue());
+  const remaining = 3_000 - (Date.now() - renderedAt);
+  if (remaining > 0) await page.waitForTimeout(remaining + 250);
+
   await page.getByRole('button', { name: /request the inspection/i }).click();
 
   // The error summary takes focus, not merely scroll — a screen-reader user gets nothing from
   // a scroll — and it is announced as an alert.
   const alert = page.getByRole('alert').first();
   await expect(alert).toBeVisible({ timeout: 20_000 });
+
+  // Let the page stop moving before measuring colour.
+  //
+  // Moving focus to the alert scrolls the page, which brings new sections into view and starts
+  // their scroll-triggered fade. Running axe straight after caught `text-ink` part-way through
+  // that fade — reported as #ECEBE6 on #FAFAF6, 1.14:1 — and produced 18 violations that were
+  // all gone 1.5s later. A state that exists for a few hundred milliseconds mid-animation is
+  // exempt from the contrast requirement; asserting on it measures the animation, not the
+  // design. Only mobile ever saw it, because the desktop run happened to be slow enough.
+  //
+  // Two identical opacity samples rather than a fixed sleep: it waits exactly as long as the
+  // fades take, and it does not silently stop waiting if they get slower. GSAP drives these
+  // through inline styles, so there is no animation object to await.
+  const opacities = () =>
+    page.evaluate(() =>
+      [...document.querySelectorAll('main *')].map((el) => getComputedStyle(el).opacity).join(',')
+    );
+  await expect
+    .poll(
+      async () => {
+        const before = await opacities();
+        await page.waitForTimeout(250);
+        return (await opacities()) === before;
+      },
+      { timeout: 15_000 }
+    )
+    .toBe(true);
 
   const results = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])

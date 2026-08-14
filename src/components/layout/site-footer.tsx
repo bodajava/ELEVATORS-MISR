@@ -44,7 +44,7 @@ export async function SiteFooter({ locale }: { locale: Locale }) {
         {/* ---- the invitation ------------------------------------------- */}
         <div className="grid gap-10 lg:grid-cols-[1.4fr_auto] lg:items-end">
           <div>
-            <p className="annotation text-accent">{tCta('requestInspection')}</p>
+            <p className="annotation text-accent-on-dark">{tCta('requestInspection')}</p>
             <h2 className="mt-6 max-w-[14ch] text-4xl text-ink-on-dark sm:text-5xl lg:text-6xl">
               {t('invitation')}
             </h2>
@@ -81,7 +81,7 @@ export async function SiteFooter({ locale }: { locale: Locale }) {
                 <li key={item.key}>
                   <Link
                     href={item.href}
-                    className="duration-fast inline-flex min-h-11 items-center text-sm text-ink-on-dark transition-colors hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                    className="duration-fast inline-flex min-h-11 items-center text-sm text-ink-on-dark transition-colors hover:text-accent-on-dark focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-on-dark"
                   >
                     {tNav(item.key)}
                   </Link>
@@ -99,7 +99,7 @@ export async function SiteFooter({ locale }: { locale: Locale }) {
                 <li key={item.key}>
                   <Link
                     href={item.href}
-                    className="duration-fast inline-flex min-h-11 items-center text-sm text-ink-on-dark transition-colors hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                    className="duration-fast inline-flex min-h-11 items-center text-sm text-ink-on-dark transition-colors hover:text-accent-on-dark focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-on-dark"
                   >
                     {tNav(item.key)}
                   </Link>
@@ -124,7 +124,7 @@ export async function SiteFooter({ locale }: { locale: Locale }) {
                 <h2 className="annotation text-ink-2-on-dark">{t('contactHeading')}</h2>
                 <a
                   href={`tel:${unconfirmed.phone}`}
-                  className="duration-fast mt-4 inline-flex min-h-11 items-center text-base text-ink-on-dark transition-colors hover:text-accent"
+                  className="duration-fast mt-4 inline-flex min-h-11 items-center text-base text-ink-on-dark transition-colors hover:text-accent-on-dark"
                 >
                   <span dir="ltr" className="numeric">
                     {unconfirmed.phone}

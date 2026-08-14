@@ -113,12 +113,13 @@ export function LanguageSwitcher({
                 // The selected locale is an active state, so it takes the accent like every
                 // other active state on the site. `aria-current` carries it non-visually.
                 //
-                // Two different oranges, because one does not work on both grounds: full
-                // #FF6B00 is 6.8:1 on carbon but only 2.5:1 on cream, so the light ground
-                // gets the darkened --color-accent-text at 5.3:1 instead.
+                // Two different oranges, because one tone does not work on both grounds.
+                // `--accent` (#C96442) measures 3.88:1 on carbon and 3.70:1 on cream — a fail
+                // at this size either way. Carbon takes the lighter --accent-on-dark (6.54:1),
+                // cream takes the darkened --accent-text (5.26:1).
                 isActive
                   ? tone === 'dark'
-                    ? 'text-accent'
+                    ? 'text-accent-on-dark'
                     : 'text-accent-text'
                   : tone === 'dark'
                     ? 'text-ink-2-on-dark hover:text-ink-on-dark'

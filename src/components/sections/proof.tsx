@@ -27,7 +27,7 @@ export function Proof({ locale }: { locale: Locale }) {
       <Container width="wide">
         <div className="grid gap-14 lg:grid-cols-[1fr_1fr] lg:gap-24">
           <div>
-            <p className="annotation text-accent">{proof.eyebrow[locale]}</p>
+            <p className="annotation text-accent-on-dark">{proof.eyebrow[locale]}</p>
             <h2 className="mt-5 max-w-[18ch] text-3xl text-ink-on-dark lg:text-4xl">
               {proof.heading[locale]}
             </h2>
@@ -51,7 +51,7 @@ export function Proof({ locale }: { locale: Locale }) {
                 <CountUp
                   to={verified.panoramaClassifiedRecords}
                   dir="ltr"
-                  className="numeric font-display text-7xl leading-none text-accent"
+                  className="numeric font-display text-7xl leading-none text-accent-on-dark"
                 />
                 <span className="numeric annotation text-ink-2-on-dark" dir="ltr">
                   / {verified.projectRecords}
