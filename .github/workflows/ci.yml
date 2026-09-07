@@ -110,6 +110,38 @@ jobs:
     name: end to end · accessibility
     runs-on: ubuntu-latest
     timeout-minutes: 30
+
+    # A throwaway Postgres, because the conversion path cannot be tested without one.
+    #
+    # The note at the top of this file says the app falls back to an in-memory store outside
+    # production and that this is "exactly the shape the E2E suite needs". That was wrong about
+    # this job: `playwright.config.ts` runs `pnpm build && pnpm start`, and `next start` *is*
+    # production, so the fallback is correctly refused and the form answered every submission
+    # with "DATABASE_URL is not configured". Eight tests — the inspection form and the
+    # field-correction path, across all four projects — failed on every push because of it.
+    #
+    # Skipping them was the other option and it was the worse one: the single conversion the
+    # whole site exists for would have had no end-to-end coverage at all. This container holds
+    # no credential, is created and destroyed with the job, and never touches the real database.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: elevators_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      # Local to the runner. Not a secret, and worthless anywhere else.
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/elevators_e2e
+
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -121,6 +153,11 @@ jobs:
 
       - name: install browsers
         run: pnpm exec playwright install --with-deps chromium
+
+      # The same migrations that run against the real database, applied to the throwaway one.
+      # If a migration is broken, the conversion path fails here rather than at deploy time.
+      - name: apply migrations
+        run: pnpm db:migrate
 
       # `playwright.config.ts` builds and starts the production server itself. A dev server
       # would be measuring an unminified bundle with an error overlay attached.
