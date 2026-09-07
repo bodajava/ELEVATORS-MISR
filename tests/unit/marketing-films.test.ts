@@ -44,19 +44,45 @@ function onDisk(): string[] {
 
 const slides = manifest.videos.filter((v) => v.role === 'marketing-film');
 
+/**
+ * Is the source media actually here?
+ *
+ * `assets/` is gitignored — 190MB that has never been in the repository — so on a CI runner the
+ * folder does not exist and the three assertions that compare the manifest against the *disk*
+ * cannot run there. They were not skipped, so they failed on every single push, and this job
+ * had been red long enough that nobody read it any more. A check that is always red is worse
+ * than no check: it hides the real ones behind it.
+ *
+ * They now skip when the media is absent and run in full when it is present — which is every
+ * developer machine, and anywhere the media is mounted. Nothing is weakened where it can be
+ * verified. Everything provable from the committed manifest and the committed derivatives in
+ * `public/` still runs everywhere, CI included.
+ */
+const MEDIA_PRESENT = existsSync(fileURLToPath(new URL(FOLDER, ROOT)));
+
+if (!MEDIA_PRESENT) {
+  console.warn(
+    `[marketing-films] ${FOLDER} is not present, so the three disk-comparison assertions are ` +
+      `skipped. Run this where the source media is available to check the slider against it.`
+  );
+}
+
+/** Runs only where the source media is. */
+const itWithMedia = it.skipIf(!MEDIA_PRESENT);
+
 describe('Marketing Films slider', () => {
-  it('finds the marketing folder on disk', () => {
+  itWithMedia('finds the marketing folder on disk', () => {
     expect(existsSync(fileURLToPath(new URL(FOLDER, ROOT))), `${FOLDER} is missing`).toBe(true);
     expect(onDisk().length).toBeGreaterThan(0);
   });
 
-  it('renders exactly one slide per video file in the folder', () => {
+  itWithMedia('renders exactly one slide per video file in the folder', () => {
     // The acceptance assertion. Two independently derived counts.
     const files = onDisk();
     expect(slides.length, `on disk: ${files.join(', ')}`).toBe(files.length);
   });
 
-  it('reaches every source file — none is dropped', () => {
+  itWithMedia('reaches every source file — none is dropped', () => {
     const rendered = new Set(slides.map((s) => s.source.split('/').pop()));
     for (const file of onDisk()) {
       expect(rendered.has(file), `${file} is on disk but not in the slider`).toBe(true);
