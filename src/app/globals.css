@@ -858,6 +858,62 @@
   }
 }
 
+/* ---------------------------------------------------------------------------
+   Name rail
+   A continuously drifting line of partner names. The track holds its list twice, so
+   travelling -50% lands on a pixel-identical copy and the loop has no seam — nothing
+   measures a width and no JavaScript runs. The spacing lives on the item rather than
+   as a track `gap`, so one repeating unit is exactly half the track.
+   See components/ui/name-rail.tsx.
+   --------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: no-preference) {
+  [data-rail-track] {
+    animation: rail-drift var(--rail-duration, 70s) linear infinite;
+    will-change: transform;
+  }
+
+  /* RTL runs the other way, and this is a layout fact rather than a preference. In an RTL
+     flex row the first item is the *rightmost*, so the track's second copy sits to the LEFT
+     of the first and the window opens on the right edge. Travelling -50% there moves away
+     from the duplicate instead of onto it: the rail empties out and then jumps back. The
+     Arabic page shifts +50% so it lands on the copy, exactly as English does. */
+  [dir='rtl'] [data-rail-track] {
+    animation-name: rail-drift-rtl;
+  }
+
+  /* The second rail runs the other way, so the two read as two sets rather than as one
+     long list that wrapped. */
+  [data-rail-track][data-reverse='true'] {
+    animation-direction: reverse;
+  }
+
+  /* Hover holds the rail still so a name can be read. Gated on a real pointer: on a
+     touch screen the hover state persists after a tap and would stop the rail for good. */
+  @media (hover: hover) {
+    [data-rail]:hover [data-rail-track] {
+      animation-play-state: paused;
+    }
+  }
+}
+
+@keyframes rail-drift {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+@keyframes rail-drift-rtl {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(50%, 0, 0);
+  }
+}
+
 /* ==========================================================================
    Bottom navigation clearance
    The mobile bar floats over the page, so the document reserves exactly its height

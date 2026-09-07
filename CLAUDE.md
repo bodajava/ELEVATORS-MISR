@@ -181,6 +181,34 @@ they are dropped instead of springing back, inside bounds computed by hand — `
 with a ref does not account for the ancestor transform the fan applies, and every boundary came
 out displaced by exactly that print's fan offset.
 
+**Partners rail, 2026-09-06.** The owner supplied the design studios and construction firms
+his work reaches compound projects through, and they now ship as a two-rail section on the
+homepage between `SelectedProjects` and `HomeProcess` (`src/content/partners.ts`,
+`src/components/sections/partners.tsx`, `src/components/ui/name-rail.tsx`). Three things about
+it are load-bearing:
+
+- **Names, not logos.** No logo file was supplied for any firm, and the source material was
+  Instagram screenshots — a mark lifted from one is a third-party brand mark (the category 14
+  assets are held back over) and a profile picture is a photograph of an identifiable person
+  (9 more). The rail sets the names as type instead, so it needs no third-party asset at all.
+  `tests/unit/partners.test.ts` fails if an image, link or extra field is added to an entry.
+- **No invented transliterations.** The contractors trade under Arabic names with no confirmed
+  English lockup, so the Arabic name renders in both locales and a test asserts `en === ar`.
+  Guessing "Modon" for «مدن» is the same class of error as inventing a logo variant.
+- **The rail is CSS, not a library.** The reference implementation the owner sent uses
+  `framer-motion` + `react-use-measure`; neither is installed (this project has `motion` v13),
+  and a duplicated track translating -50% is the whole effect. It stays a server component.
+  The spacing must live on the _item_, never as a track `gap`: with 2n items a track gap makes
+  one repeating unit half a gap shorter than half the track, and the rail jolts once per cycle.
+  RTL needs `rail-drift-rtl` (+50%), because an RTL flex row puts the duplicate to the _left_
+  and -50% animates away from it. Both facts are measured by `scripts/partners-check.mjs`, and
+  both were found there rather than by reading the code.
+
+This narrows one earlier statement and nothing else: `proof.tsx` says "No client logos,
+certifications or ratings — none of those are verified", which stays true of logos,
+certifications and ratings. Partner _names_ are now owner-supplied. No count of projects, no
+ranking, no endorsement claim and no follower figure is published with them.
+
 **Owner content and Arabic pass, 2026-08-12.** The owner supplied replacement homepage copy
 (the "first and only in Egypt" claim, the company statement, the coverage widening to the Arab
 world) and compound names for four of the five featured installations, so the site now publishes
@@ -198,7 +226,10 @@ that produced 118px-wide cards on a phone.
 Verification harnesses live in `scripts/` and are run against a dev or production server:
 `hero-check`, `form-check`, `matrix-check`, `emptiness`, `about-check`, `perf`, `index-check`,
 `grid-check`, `ambient-check`, `marketing-check` (both film rails; `--rail=marketing|projects`
-picks one). A terminal
+picks one), `partners-check` (the two name rails: loop seam, direction per locale, reduced
+motion, hover pause). Note that `window.scrollTo` does not work in these harnesses — Lenis
+owns the scroll in the full motion tier and overwrites it on the next frame, which is why
+`partners-check` drives the page with real wheel events. A terminal
 command passing is not visual completion — `emptiness.mjs` exists because the earlier
 band-based dead-space check reported clean pages that were visibly empty.
 

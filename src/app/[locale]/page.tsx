@@ -8,6 +8,7 @@ import { InspectionCta } from '@/components/sections/inspection-cta';
 import { MarketingFilms } from '@/components/sections/marketing-films';
 import { MediaStories } from '@/components/sections/media-stories';
 import { PanoramaStory } from '@/components/sections/panorama-story';
+import { Partners } from '@/components/sections/partners';
 import { HomeProcess } from '@/components/sections/home-process';
 import { Proof } from '@/components/sections/proof';
 import { SelectedProjects } from '@/components/sections/selected-projects';
@@ -22,7 +23,8 @@ import { homePageSchema } from '@/lib/seo/schema';
  * Homepage — a guided vertical journey.
  *
  * Arrive → understand the specialism → ascend through the work → understand the product →
- * understand the process → see the films → see the people → book the inspection.
+ * see who specifies it → understand the process → see the films → see the people →
+ * book the inspection.
  *
  * Media is resolved on the server and passed down, so the client components never import the
  * manifest and it stays out of the client bundle.
@@ -80,6 +82,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
       <Ascent floors={floors} eyebrow={ascent.eyebrow[l]} heading={ascent.heading[l]} locale={l} />
       <PanoramaStory locale={l} />
       <SelectedProjects locale={l} />
+      <Partners locale={l} />
       <HomeProcess locale={l} />
       <MediaStories locale={l} />
       <SocialProof locale={l} />
