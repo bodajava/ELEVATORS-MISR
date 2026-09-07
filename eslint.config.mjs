@@ -20,6 +20,14 @@ const eslintConfig = defineConfig([
     'playwright-report/**',
     'test-results/**',
     'coverage/**',
+
+    // Playwright's output, which this project moved out of the two default directories above
+    // and into `.e2e/` — see `outputDir` and the html reporter in playwright.config.ts. The
+    // ignores were never moved with it, so the bundled report counted as source: running the
+    // E2E suite and then `pnpm lint` produced 3031 problems in generated JavaScript. CI never
+    // saw it because lint and E2E are separate jobs there, which is exactly what makes it the
+    // kind of failure that wastes an afternoon locally.
+    '.e2e/**',
   ]),
 
   ...nextVitals,

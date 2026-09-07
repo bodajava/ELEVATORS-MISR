@@ -385,9 +385,24 @@ export function Hero({ locale, heroAsset }: { locale: Locale; heroAsset: HeroAss
           {/* The video — between the words */}
           <div
             data-hero-film
-            // No `-translate-x-1/2 -translate-y-1/2` here: GSAP owns this element's transform
-            // and writes `translate: none`, so those utilities were being discarded. Centring
-            // is applied as `xPercent/yPercent` in the timeline instead — see CENTRE above.
+            // Centred twice on purpose, in two layers that cannot disagree.
+            //
+            // `-translate-x-1/2 -translate-y-1/2` cannot be used: Tailwind v4 emits those as the
+            // `translate` *property*, and GSAP writes `translate: none` when it takes ownership,
+            // so they were silently discarded. Centring therefore lives in the timeline as
+            // `xPercent/yPercent` — see CENTRE above.
+            //
+            // But the timeline only runs after hydration, and until it does the browser paints
+            // this element at `left: 50%` with no correction at all: its left edge on the centre
+            // line and `100vw - 2rem` of width running off the right of the page. At 1280px that
+            // is 640 + 1248 - 1280 = 608px of horizontal overflow on first paint — measured, and
+            // exactly what `journeys.spec.ts` was failing on. The same class of bug produced the
+            // 173px case described above.
+            //
+            // The fix is to state the same centring in the `transform` property, which is the
+            // property GSAP itself owns. `xPercent: -50` *sets* the transform rather than adding
+            // to it, so when the timeline runs it overwrites this with an equivalent matrix —
+            // there is no double shift, and no window in which the element is uncentred.
             // The ratio is a breakpoint decision, not one number.
             //
             // 2.6:1 from `lg`. Wider than anamorphic, and it is doing a specific job: at the
@@ -400,7 +415,7 @@ export function Hero({ locale, heroAsset }: { locale: Locale; heroAsset: HeroAss
             // 844px screen, with the rest of the first view empty. A landscape clip needs
             // height to read at all at 390px, so the phone gets 3:2 — 358x239, which is a
             // frame a visitor can actually see something in.
-            className="absolute top-1/2 left-1/2 z-20 aspect-3/2 w-[calc(100vw-2rem)] overflow-hidden will-change-transform lg:aspect-[2.6/1]"
+            className="absolute top-1/2 left-1/2 z-20 aspect-3/2 w-[calc(100vw-2rem)] [transform:translate(-50%,-50%)] overflow-hidden will-change-transform lg:aspect-[2.6/1]"
           >
             {heroAsset ? <HeroVideo hero={heroAsset} /> : null}
 
