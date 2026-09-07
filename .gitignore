@@ -74,6 +74,7 @@ next-env.d.ts
 /.form-check/
 /.audit-density/
 /.shots-gate/
+/.partners-check/
 /.perf/
 /.stages/
 /.review/
